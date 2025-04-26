@@ -7,5 +7,9 @@ import 'vue-toastification/dist/index.css';
 
 const app = createApp(App);
 app.use(router);
-app.use(Toast, { timeout: 3000 }); // Инициализация vue-toastification
+app.use(Toast, {
+  transition: 'Vue-Toastification__bounce',
+  maxToasts: 20,
+  newestOnTop: true,
+});
 app.mount('#app');
