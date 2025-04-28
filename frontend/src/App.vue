@@ -3,7 +3,7 @@
     <!-- Навигационное меню -->
     <nav v-if="user" class="navbar navbar-expand-lg navbar-light shadow-sm">
       <div class="container">
-        <span class="navbar-brand text-success">Детский центр</span>
+        <span class="navbar-brand text-success">Детский развивающий центр</span>
         <button
           class="navbar-toggler"
           type="button"

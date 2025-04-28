@@ -125,7 +125,7 @@
             <form @submit.prevent="addChild" class="add-child-form">
               <div class="mb-3">
                 <label for="child_name" class="form-label">Имя ребёнка</label>
-                <input v-model="newChild.name" type="text" id="child_name" class="form-control" placeholder="Введите имя" required />
+                <input v-model="newChild.name" type="text" id="child_name" class="form-control" placeholder="Введите ФИО ребенка" required />
               </div>
               <div class="mb-3">
                 <label for="birth_date" class="form-label">Дата рождения</label>
@@ -154,7 +154,7 @@
           </div>
 
           <div v-if="showEditChildForm" class="mt-4">
-            <h4>Редактировать ребёнка</h4>
+            <h4>Редактировать данные ребёнка</h4>
             <form @submit.prevent="updateChild" class="edit-child-form">
               <div class="mb-3">
                 <label for="edit_child_name" class="form-label">Имя ребёнка</label>
