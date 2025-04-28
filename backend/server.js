@@ -6,7 +6,7 @@ const cors = require('cors');
 
 const app = express();
 const port = 3000;
-const JWT_SECRET = 'your_jwt_secret_key'; // Replace with a secure key in production
+const JWT_SECRET = 'your_jwt_secret_key'; // Замените на безопасный ключ в продакшене
 
 // Middleware
 app.use(cors());
@@ -17,7 +17,7 @@ const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
   password: 'vladlena121512',
-  database: 'children_center'
+  database: 'children_center',
 });
 
 // Initialize database and tables
@@ -177,7 +177,7 @@ const authenticateToken = (req, res, next) => {
 // Start server
 const startServer = async () => {
   await initializeDatabase();
-  db.connect(err => {
+  db.connect((err) => {
     if (err) {
       console.error('❌ Error connecting to database:', err.stack);
       process.exit(1);
@@ -191,20 +191,29 @@ const startServer = async () => {
     if (!username || !email || !password || !phone) {
       return res.status(400).json({ error: 'All fields are required' });
     }
-    if (username.length > 50) return res.status(400).json({ error: 'Username must not exceed 50 characters' });
-    if (email.length > 100) return res.status(400).json({ error: 'Email must not exceed 100 characters' });
-    if (phone.length > 15) return res.status(400).json({ error: 'Phone must not exceed 15 characters' });
+    if (username.length > 50)
+      return res.status(400).json({ error: 'Username must not exceed 50 characters' });
+    if (email.length > 100)
+      return res.status(400).json({ error: 'Email must not exceed 100 characters' });
+    if (phone.length > 15)
+      return res.status(400).json({ error: 'Phone must not exceed 15 characters' });
 
     try {
       const hash = await bcrypt.hash(password, 10);
       await db.promise().query('START TRANSACTION');
       try {
-        const [userResult] = await db.promise().query(
-          'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
-          [username, email, hash, 'parent']
-        );
+        const [userResult] = await db
+          .promise()
+          .query('INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)', [
+            username,
+            email,
+            hash,
+            'parent',
+          ]);
         const userId = userResult.insertId;
-        await db.promise().query('INSERT INTO parents (user_id, phone) VALUES (?, ?)', [userId, phone]);
+        await db
+          .promise()
+          .query('INSERT INTO parents (user_id, phone) VALUES (?, ?)', [userId, phone]);
         await db.promise().query('COMMIT');
         res.status(201).json({ message: 'Parent registered' });
       } catch (err) {
@@ -236,14 +245,17 @@ const startServer = async () => {
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) return res.status(401).json({ error: 'Invalid password' });
       const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
-      res.json({ user: { id: user.id, email: user.email, role: user.role, username: user.username }, token });
+      res.json({
+        user: { id: user.id, email: user.email, role: user.role, username: user.username },
+        token,
+      });
     } catch (err) {
       console.error('Server error:', err.stack);
       res.status(500).json({ error: 'Server error' });
     }
   });
 
-  // New endpoint: Validate token
+  // Validate token
   app.get('/api/auth/validate', (req, res) => {
     const token = req.headers.authorization?.split(' ')[1]; // Получаем токен из заголовка "Bearer <token>"
 
@@ -346,7 +358,12 @@ const startServer = async () => {
       return res.status(400).json({ error: 'Review content is required' });
     }
     try {
-      await db.promise().query('INSERT INTO reviews (parent_id, content) VALUES (?, ?)', [req.user.id, content]);
+      await db
+        .promise()
+        .query('INSERT INTO reviews (parent_id, content) VALUES (?, ?)', [
+          req.user.id,
+          content,
+        ]);
       res.status(201).json({ message: 'Review added' });
     } catch (err) {
       console.error('Error adding review:', err.stack);
@@ -448,17 +465,23 @@ const startServer = async () => {
     if (!username || !email || !password) {
       return res.status(400).json({ error: 'Username, email, and password are required' });
     }
-    if (username.length > 50) return res.status(400).json({ error: 'Username must not exceed 50 characters' });
-    if (email.length > 100) return res.status(400).json({ error: 'Email must not exceed 100 characters' });
+    if (username.length > 50)
+      return res.status(400).json({ error: 'Username must not exceed 50 characters' });
+    if (email.length > 100)
+      return res.status(400).json({ error: 'Email must not exceed 100 characters' });
 
     try {
       const hash = await bcrypt.hash(password, 10);
       await db.promise().query('START TRANSACTION');
       try {
-        const [userResult] = await db.promise().query(
-          'INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)',
-          [username, email, hash, 'teacher']
-        );
+        const [userResult] = await db
+          .promise()
+          .query('INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)', [
+            username,
+            email,
+            hash,
+            'teacher',
+          ]);
         const userId = userResult.insertId;
         await db.promise().query('INSERT INTO teachers (user_id) VALUES (?)', [userId]);
         await db.promise().query('COMMIT');
@@ -486,7 +509,9 @@ const startServer = async () => {
     }
     const { userId } = req.params;
     try {
-      const [result] = await db.promise().query('DELETE FROM users WHERE id = ? AND role = ?', [userId, 'teacher']);
+      const [result] = await db
+        .promise()
+        .query('DELETE FROM users WHERE id = ? AND role = ?', [userId, 'teacher']);
       if (result.affectedRows === 0) {
         return res.status(404).json({ error: 'Teacher not found' });
       }
@@ -525,13 +550,17 @@ const startServer = async () => {
     }
     const { phone, education, experience, subject_id } = req.body;
     if (!phone || phone.length > 15) {
-      return res.status(400).json({ error: 'Phone is required and must not exceed 15 characters' });
+      return res
+        .status(400)
+        .json({ error: 'Phone is required and must not exceed 15 characters' });
     }
     try {
-      const [result] = await db.promise().query(
-        'UPDATE teachers SET phone = ?, education = ?, experience = ?, subject_id = ? WHERE user_id = ?',
-        [phone, education || null, experience || null, subject_id || null, req.user.id]
-      );
+      const [result] = await db
+        .promise()
+        .query(
+          'UPDATE teachers SET phone = ?, education = ?, experience = ?, subject_id = ? WHERE user_id = ?',
+          [phone, education || null, experience || null, subject_id || null, req.user.id]
+        );
       if (result.affectedRows === 0) return res.status(404).json({ error: 'Teacher not found' });
       res.json({ message: 'Profile updated' });
     } catch (err) {
@@ -547,7 +576,9 @@ const startServer = async () => {
     }
     const { month } = req.query;
     try {
-      const [teacher] = await db.promise().query('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
+      const [teacher] = await db
+        .promise()
+        .query('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
       if (teacher.length === 0) return res.status(404).json({ error: 'Teacher not found' });
       const teacherId = teacher[0].id;
 
@@ -559,19 +590,19 @@ const startServer = async () => {
       const params = [teacherId];
 
       if (month) {
-        query += ' AND DATE_FORMAT(schedule, \'%Y-%m\') = ?';
+        query += " AND DATE_FORMAT(schedule, '%Y-%m') = ?";
         params.push(month);
       } else {
-        query += ' GROUP BY DATE_FORMAT(schedule, \'%Y-%m\')';
+        query += " GROUP BY DATE_FORMAT(schedule, '%Y-%m')";
       }
 
       query += ' ORDER BY month DESC';
 
       const [results] = await db.promise().query(query, params);
       // Ensure total_salary is a number
-      const formattedResults = results.map(item => ({
+      const formattedResults = results.map((item) => ({
         ...item,
-        total_salary: Number(item.total_salary) || 0
+        total_salary: Number(item.total_salary) || 0,
       }));
       res.json(formattedResults);
     } catch (err) {
@@ -587,11 +618,11 @@ const startServer = async () => {
     }
     const { id } = req.params;
     try {
-      const [result] = await db.promise().query(
-        'UPDATE classes SET completed = TRUE WHERE id = ? AND schedule <= NOW()',
-        [id]
-      );
-      if (result.affectedRows === 0) return res.status(404).json({ error: 'Class not found or not yet occurred' });
+      const [result] = await db
+        .promise()
+        .query('UPDATE classes SET completed = TRUE WHERE id = ? AND schedule <= NOW()', [id]);
+      if (result.affectedRows === 0)
+        return res.status(404).json({ error: 'Class not found or not yet occurred' });
       res.json({ message: 'Class marked as completed' });
     } catch (err) {
       console.error('Error marking class as completed:', err.stack);
@@ -605,7 +636,9 @@ const startServer = async () => {
       return res.status(403).json({ error: 'Access denied' });
     }
     try {
-      const [teacher] = await db.promise().query('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
+      const [teacher] = await db
+        .promise()
+        .query('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
       if (teacher.length === 0) return res.status(404).json({ error: 'Teacher not found' });
       const teacherId = teacher[0].id;
 
@@ -632,7 +665,9 @@ const startServer = async () => {
       return res.status(403).json({ error: 'Access denied' });
     }
     try {
-      const [teacher] = await db.promise().query('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
+      const [teacher] = await db
+        .promise()
+        .query('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
       if (teacher.length === 0) return res.status(404).json({ error: 'Teacher not found' });
       const teacherId = teacher[0].id;
 
@@ -662,7 +697,9 @@ const startServer = async () => {
     if (!startDate) return res.status(400).json({ error: 'Start date is required' });
 
     try {
-      const [teacher] = await db.promise().query('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
+      const [teacher] = await db
+        .promise()
+        .query('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
       if (teacher.length === 0) return res.status(404).json({ error: 'Teacher not found' });
       const teacherId = teacher[0].id;
 
@@ -694,7 +731,9 @@ const startServer = async () => {
     if (!startDate) return res.status(400).json({ error: 'Start date is required' });
 
     try {
-      const [teacher] = await db.promise().query('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
+      const [teacher] = await db
+        .promise()
+        .query('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
       if (teacher.length === 0) return res.status(404).json({ error: 'Teacher not found' });
       const teacherId = teacher[0].id;
 
@@ -726,7 +765,9 @@ const startServer = async () => {
     if (!date) return res.status(400).json({ error: 'Date is required' });
 
     try {
-      const [teacher] = await db.promise().query('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
+      const [teacher] = await db
+        .promise()
+        .query('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
       if (teacher.length === 0) return res.status(404).json({ error: 'Teacher not found' });
       const teacherId = teacher[0].id;
 
@@ -753,22 +794,31 @@ const startServer = async () => {
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Access denied' });
     }
-    const { subject_id, teacher_id, schedule, room_id, price, class_type, min_age, max_age } = req.body;
+    const { subject_id, teacher_id, schedule, room_id, price, class_type, min_age, max_age } =
+      req.body;
     if (!subject_id || !teacher_id || !schedule || !class_type || price == null) {
       return res.status(400).json({ error: 'All required fields must be provided' });
     }
     try {
-      const [conflicts] = await db.promise().query(`
+      const [conflicts] = await db.promise().query(
+        `
         SELECT id FROM classes
         WHERE teacher_id = ? AND schedule = ?
-      `, [teacher_id, schedule]);
+      `,
+        [teacher_id, schedule]
+      );
       if (conflicts.length > 0) {
-        return res.status(400).json({ error: 'Schedule conflict: teacher is already booked at this time' });
+        return res
+          .status(400)
+          .json({ error: 'Schedule conflict: teacher is already booked at this time' });
       }
-      await db.promise().query(`
+      await db.promise().query(
+        `
         INSERT INTO classes (subject_id, teacher_id, schedule, room_id, price, class_type, min_age, max_age)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `, [subject_id, teacher_id, schedule, room_id || null, price, class_type, min_age || 3, max_age || 16]);
+      `,
+        [subject_id, teacher_id, schedule, room_id || null, price, class_type, min_age || 3, max_age || 16]
+      );
       res.status(201).json({ message: 'Class added' });
     } catch (err) {
       console.error('Error adding class:', err.stack);
@@ -782,22 +832,31 @@ const startServer = async () => {
       return res.status(403).json({ error: 'Access denied' });
     }
     const { id } = req.params;
-    const { subject_id, teacher_id, schedule, room_id, price, class_type, min_age, max_age } = req.body;
+    const { subject_id, teacher_id, schedule, room_id, price, class_type, min_age, max_age } =
+      req.body;
     if (!subject_id || !teacher_id || !schedule || !class_type || price == null) {
       return res.status(400).json({ error: 'All required fields must be provided' });
     }
     try {
-      const [conflicts] = await db.promise().query(`
+      const [conflicts] = await db.promise().query(
+        `
         SELECT id FROM classes
         WHERE teacher_id = ? AND schedule = ? AND id != ?
-      `, [teacher_id, schedule, id]);
+      `,
+        [teacher_id, schedule, id]
+      );
       if (conflicts.length > 0) {
-        return res.status(400).json({ error: 'Schedule conflict: teacher is already booked at this time' });
+        return res
+          .status(400)
+          .json({ error: 'Schedule conflict: teacher is already booked at this time' });
       }
-      const [result] = await db.promise().query(`
+      const [result] = await db.promise().query(
+        `
         UPDATE classes SET subject_id = ?, teacher_id = ?, schedule = ?, room_id = ?, price = ?, class_type = ?, min_age = ?, max_age = ?
         WHERE id = ?
-      `, [subject_id, teacher_id, schedule, room_id || null, price, class_type, min_age || 3, max_age || 16, id]);
+      `,
+        [subject_id, teacher_id, schedule, room_id || null, price, class_type, min_age || 3, max_age || 16, id]
+      );
       if (result.affectedRows === 0) return res.status(404).json({ error: 'Class not found' });
       res.json({ message: 'Class updated' });
     } catch (err) {
@@ -864,21 +923,21 @@ const startServer = async () => {
       `);
       // Format the data to group children under their parents
       const parentsMap = new Map();
-      results.forEach(row => {
+      results.forEach((row) => {
         if (!parentsMap.has(row.user_id)) {
           parentsMap.set(row.user_id, {
             user_id: row.user_id,
             username: row.username,
             email: row.email,
             phone: row.phone,
-            children: []
+            children: [],
           });
         }
         if (row.child_id) {
           parentsMap.get(row.user_id).children.push({
             id: row.child_id,
             name: row.child_name,
-            birth_date: row.birth_date
+            birth_date: row.birth_date,
           });
         }
       });
@@ -913,20 +972,43 @@ const startServer = async () => {
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Access denied' });
     }
+    const { month } = req.query; // Получаем параметр month из запроса
     try {
-      const [results] = await db.promise().query(`
+      let query = `
         SELECT users.username AS teacher_name, subjects.name AS subject_name,
-               COUNT(classes.id) AS class_count, COUNT(enrollments.id) AS total_students,
-               SUM(classes.price) AS total_revenue
+               COUNT(DISTINCT classes.id) AS class_count, COUNT(enrollments.id) AS total_students,
+               SUM(classes.price) AS total_revenue,
+               SUM(classes.price) * 0.4 AS teacher_salary
         FROM teachers
         JOIN users ON teachers.user_id = users.id
         LEFT JOIN subjects ON teachers.subject_id = subjects.id
         LEFT JOIN classes ON teachers.id = classes.teacher_id
         LEFT JOIN enrollments ON classes.id = enrollments.class_id
+        WHERE classes.completed = TRUE
+      `;
+      const params = [];
+
+      if (month) {
+        query += ` AND DATE_FORMAT(classes.schedule, '%Y-%m') = ?`;
+        params.push(month);
+      }
+
+      query += `
         GROUP BY teachers.id, users.username, subjects.name
-      `);
-      console.log('GET /api/statistics/teachers - Response:', results);
-      res.json(results || []);
+      `;
+
+      const [results] = await db.promise().query(query, params);
+      // Форматируем результаты, чтобы убедиться, что числовые поля корректны
+      const formattedResults = results.map((item) => ({
+        teacher_name: item.teacher_name,
+        subject_name: item.subject_name,
+        class_count: Number(item.class_count) || 0,
+        total_students: Number(item.total_students) || 0,
+        total_revenue: Number(item.total_revenue) || 0,
+        teacher_salary: Number(item.teacher_salary) || 0,
+      }));
+      console.log('GET /api/statistics/teachers - Response:', formattedResults);
+      res.json(formattedResults || []);
     } catch (err) {
       console.error('Error fetching teacher statistics:', err.stack);
       res.status(500).json({ error: 'Server error' });
@@ -940,7 +1022,7 @@ const startServer = async () => {
 };
 
 // Handle startup errors
-startServer().catch(err => {
+startServer().catch((err) => {
   console.error('❌ Error starting server:', err.stack);
   process.exit(1);
 });
