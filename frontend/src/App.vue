@@ -29,7 +29,7 @@
           </ul>
           <div class="d-flex align-items-center">
             <span class="me-3 text-muted">Добро пожаловать, {{ user?.username || 'Гость' }}!</span>
-            <button @click="logout" class="btn btn-dark-green">Выйти</button>
+        
           </div>
         </div>
       </div>
@@ -125,9 +125,7 @@ export default {
 .content {
   padding: 20px;
 }
-</style>
 
-<style>
 /* Стили для toast (если используется vue-toastification) */
 .Vue-Toastification__toast--success {
   background-color: #2e7d32 !important;

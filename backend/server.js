@@ -6,13 +6,13 @@ const cors = require('cors');
 
 const app = express();
 const port = 3000;
-const JWT_SECRET = 'your_jwt_secret_key'; // Замените на безопасный ключ в продакшене
+const JWT_SECRET = 'your_jwt_secret_key'; // Replace with a secure key in production
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Подключение к базе данных
+// Database connection
 const db = mysql.createConnection({
   host: 'localhost',
   user: 'root',
@@ -20,13 +20,13 @@ const db = mysql.createConnection({
   database: 'children_center'
 });
 
-// Инициализация базы данных и таблиц
+// Initialize database and tables
 const initializeDatabase = async () => {
   try {
     await db.promise().query('CREATE DATABASE IF NOT EXISTS children_center');
     await db.promise().query('USE children_center');
 
-    // Таблица users
+    // Users table
     await db.promise().query(`
       CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -37,7 +37,7 @@ const initializeDatabase = async () => {
       )
     `);
 
-    // Таблица subjects
+    // Subjects table
     await db.promise().query(`
       CREATE TABLE IF NOT EXISTS subjects (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -45,7 +45,7 @@ const initializeDatabase = async () => {
       )
     `);
 
-    // Таблица parents
+    // Parents table
     await db.promise().query(`
       CREATE TABLE IF NOT EXISTS parents (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -55,7 +55,7 @@ const initializeDatabase = async () => {
       )
     `);
 
-    // Таблица teachers
+    // Teachers table
     await db.promise().query(`
       CREATE TABLE IF NOT EXISTS teachers (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -69,7 +69,7 @@ const initializeDatabase = async () => {
       )
     `);
 
-    // Таблица deleted_teachers
+    // Deleted teachers table
     await db.promise().query(`
       CREATE TABLE IF NOT EXISTS deleted_teachers (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -82,7 +82,7 @@ const initializeDatabase = async () => {
       )
     `);
 
-    // Таблица children
+    // Children table
     await db.promise().query(`
       CREATE TABLE IF NOT EXISTS children (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -93,7 +93,7 @@ const initializeDatabase = async () => {
       )
     `);
 
-    // Таблица rooms
+    // Rooms table
     await db.promise().query(`
       CREATE TABLE IF NOT EXISTS rooms (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -101,7 +101,7 @@ const initializeDatabase = async () => {
       )
     `);
 
-    // Таблица classes
+    // Classes table
     await db.promise().query(`
       CREATE TABLE IF NOT EXISTS classes (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -113,13 +113,14 @@ const initializeDatabase = async () => {
         class_type ENUM('group', 'individual') NOT NULL,
         min_age INT NOT NULL DEFAULT 3,
         max_age INT NOT NULL DEFAULT 16,
+        completed BOOLEAN DEFAULT FALSE,
         FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE RESTRICT,
         FOREIGN KEY (teacher_id) REFERENCES teachers(id) ON DELETE SET NULL,
         FOREIGN KEY (room_id) REFERENCES rooms(id) ON DELETE SET NULL
       )
     `);
 
-    // Таблица enrollments
+    // Enrollments table
     await db.promise().query(`
       CREATE TABLE IF NOT EXISTS enrollments (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -131,7 +132,7 @@ const initializeDatabase = async () => {
       )
     `);
 
-    // Таблица reviews
+    // Reviews table
     await db.promise().query(`
       CREATE TABLE IF NOT EXISTS reviews (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -142,7 +143,7 @@ const initializeDatabase = async () => {
       )
     `);
 
-    // Триггер для архивации удалённых учителей
+    // Trigger for archiving deleted teachers
     await db.promise().query(`
       CREATE TRIGGER IF NOT EXISTS archive_teacher
       BEFORE DELETE ON teachers
@@ -153,46 +154,46 @@ const initializeDatabase = async () => {
       END
     `);
 
-    console.log('✅ База данных и таблицы успешно инициализированы');
+    console.log('✅ Database and tables successfully initialized');
   } catch (err) {
-    console.error('❌ Ошибка при инициализации базы данных:', err.message);
+    console.error('❌ Error initializing database:', err.stack);
     process.exit(1);
   }
 };
 
-// Middleware для аутентификации
+// Authentication middleware
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Токен не предоставлен' });
+  if (!token) return res.status(401).json({ error: 'Token not provided' });
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ error: 'Недействительный токен' });
+    if (err) return res.status(403).json({ error: 'Invalid token' });
     req.user = user;
     next();
   });
 };
 
-// Запуск сервера
+// Start server
 const startServer = async () => {
   await initializeDatabase();
   db.connect(err => {
     if (err) {
-      console.error('❌ Ошибка подключения к базе данных:', err.message);
+      console.error('❌ Error connecting to database:', err.stack);
       process.exit(1);
     }
-    console.log('✅ Подключение к базе данных успешно установлено');
+    console.log('✅ Database connection established');
   });
 
-  // Регистрация (только для родителей)
+  // Registration (parents only)
   app.post('/api/register', async (req, res) => {
     const { username, email, password, phone } = req.body;
     if (!username || !email || !password || !phone) {
-      return res.status(400).json({ error: 'Все поля обязательны' });
+      return res.status(400).json({ error: 'All fields are required' });
     }
-    if (username.length > 50) return res.status(400).json({ error: 'Имя пользователя не должно превышать 50 символов' });
-    if (email.length > 100) return res.status(400).json({ error: 'Email не должен превышать 100 символов' });
-    if (phone.length > 15) return res.status(400).json({ error: 'Телефон не должен превышать 15 символов' });
+    if (username.length > 50) return res.status(400).json({ error: 'Username must not exceed 50 characters' });
+    if (email.length > 100) return res.status(400).json({ error: 'Email must not exceed 100 characters' });
+    if (phone.length > 15) return res.status(400).json({ error: 'Phone must not exceed 15 characters' });
 
     try {
       const hash = await bcrypt.hash(password, 10);
@@ -205,55 +206,55 @@ const startServer = async () => {
         const userId = userResult.insertId;
         await db.promise().query('INSERT INTO parents (user_id, phone) VALUES (?, ?)', [userId, phone]);
         await db.promise().query('COMMIT');
-        res.status(201).json({ message: 'Родитель зарегистрирован' });
+        res.status(201).json({ message: 'Parent registered' });
       } catch (err) {
         await db.promise().query('ROLLBACK');
         const errorMsg =
           err.code === 'ER_DUP_ENTRY'
             ? err.message.includes('username')
-              ? 'Имя пользователя уже занято'
-              : 'Email уже зарегистрирован'
-            : 'Ошибка при регистрации';
+              ? 'Username already taken'
+              : 'Email already registered'
+            : 'Registration error';
         res.status(400).json({ error: errorMsg });
       }
     } catch (err) {
-      console.error('Ошибка сервера:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
+      console.error('Server error:', err.stack);
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
-  // Вход
+  // Login
   app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email и пароль обязательны' });
+      return res.status(400).json({ error: 'Email and password are required' });
     }
     try {
       const [results] = await db.promise().query('SELECT * FROM users WHERE email = ?', [email]);
-      if (results.length === 0) return res.status(401).json({ error: 'Пользователь не найден' });
+      if (results.length === 0) return res.status(401).json({ error: 'User not found' });
       const user = results[0];
       const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) return res.status(401).json({ error: 'Неверный пароль' });
+      if (!isMatch) return res.status(401).json({ error: 'Invalid password' });
       const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
       res.json({ user: { id: user.id, email: user.email, role: user.role, username: user.username }, token });
     } catch (err) {
-      console.error('Ошибка сервера:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
+      console.error('Server error:', err.stack);
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
-  // Получение списка предметов
+  // Get subjects
   app.get('/api/subjects', async (req, res) => {
     try {
       const [results] = await db.promise().query('SELECT * FROM subjects');
       res.json(results);
     } catch (err) {
-      console.error('Ошибка при получении предметов:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
+      console.error('Error fetching subjects:', err.stack);
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
-  // Публичный эндпоинт для получения занятий (с фильтрацией по возрасту ребёнка)
+  // Public endpoint for classes (with child age filtering)
   app.get('/api/classes/public', async (req, res) => {
     const { subject_id, child_id } = req.query;
     try {
@@ -264,7 +265,7 @@ const startServer = async () => {
         FROM classes
         JOIN subjects ON classes.subject_id = subjects.id
         LEFT JOIN teachers ON classes.teacher_id = teachers.id
-        LEFT JOIN users ON teachers.user_id = users.id
+        LEFT JOIN users ON teachers.user_id = teachers.user_id
         LEFT JOIN rooms ON classes.room_id = rooms.id
         WHERE classes.schedule > NOW()
       `;
@@ -287,12 +288,12 @@ const startServer = async () => {
       const [results] = await db.promise().query(query, params);
       res.json(results);
     } catch (err) {
-      console.error('Ошибка при получении публичных занятий:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
+      console.error('Error fetching public classes:', err.stack);
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
-  // Публичный эндпоинт для получения отзывов
+  // Public endpoint for reviews
   app.get('/api/reviews', async (req, res) => {
     try {
       const [results] = await db.promise().query(`
@@ -303,30 +304,30 @@ const startServer = async () => {
       `);
       res.json(results);
     } catch (err) {
-      console.error('Ошибка при получении отзывов:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
+      console.error('Error fetching reviews:', err.stack);
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
-  // Добавление отзыва
+  // Add review
   app.post('/api/reviews', authenticateToken, async (req, res) => {
     if (req.user.role !== 'parent') {
-      return res.status(403).json({ error: 'Доступ запрещён' });
+      return res.status(403).json({ error: 'Access denied' });
     }
     const { content } = req.body;
     if (!content) {
-      return res.status(400).json({ error: 'Текст отзыва обязателен' });
+      return res.status(400).json({ error: 'Review content is required' });
     }
     try {
       await db.promise().query('INSERT INTO reviews (parent_id, content) VALUES (?, ?)', [req.user.id, content]);
-      res.status(201).json({ message: 'Отзыв добавлен' });
+      res.status(201).json({ message: 'Review added' });
     } catch (err) {
-      console.error('Ошибка при добавлении отзыва:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
+      console.error('Error adding review:', err.stack);
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
-  // Публичный эндпоинт для получения учителей
+  // Public endpoint for teachers
   app.get('/api/users/teachers/public', async (req, res) => {
     try {
       const [results] = await db.promise().query(`
@@ -338,26 +339,26 @@ const startServer = async () => {
       `);
       res.json(results);
     } catch (err) {
-      console.error('Ошибка при получении публичных данных учителей:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
+      console.error('Error fetching public teacher data:', err.stack);
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
-  // Получение списка кабинетов
+  // Get rooms
   app.get('/api/rooms', authenticateToken, async (req, res) => {
     try {
       const [results] = await db.promise().query('SELECT * FROM rooms');
       res.json(results);
     } catch (err) {
-      console.error('Ошибка при получении кабинетов:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
+      console.error('Error fetching rooms:', err.stack);
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
-  // Получение списка всех учителей (для админа)
+  // Get all teachers (admin only)
   app.get('/api/teachers', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Доступ запрещён' });
+      return res.status(403).json({ error: 'Access denied' });
     }
     try {
       const [results] = await db.promise().query(`
@@ -368,12 +369,12 @@ const startServer = async () => {
       `);
       res.json(results);
     } catch (err) {
-      console.error('Ошибка при получении учителей:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
+      console.error('Error fetching teachers:', err.stack);
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
-  // Получение учителей по предмету
+  // Get teachers by subject
   app.get('/api/teachers/by-subject/:subjectId', authenticateToken, async (req, res) => {
     const { subjectId } = req.params;
     try {
@@ -385,15 +386,15 @@ const startServer = async () => {
       `, [subjectId]);
       res.json(results);
     } catch (err) {
-      console.error('Ошибка при получении учителей по предмету:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
+      console.error('Error fetching teachers by subject:', err.stack);
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
-  // Получение списка учителей для админ-панели
+  // Get teacher list for admin panel
   app.get('/api/users/teachers', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Доступ запрещён' });
+      return res.status(403).json({ error: 'Access denied' });
     }
     try {
       const [results] = await db.promise().query(`
@@ -405,22 +406,22 @@ const startServer = async () => {
       `);
       res.json(results);
     } catch (err) {
-      console.error('Ошибка при получении списка учителей:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
+      console.error('Error fetching teacher list:', err.stack);
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
-  // Создание нового учителя (админ)
+  // Create new teacher (admin only)
   app.post('/api/teachers', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Доступ запрещён' });
+      return res.status(403).json({ error: 'Access denied' });
     }
     const { username, email, password } = req.body;
     if (!username || !email || !password) {
-      return res.status(400).json({ error: 'Имя, email и пароль обязательны' });
+      return res.status(400).json({ error: 'Username, email, and password are required' });
     }
-    if (username.length > 50) return res.status(400).json({ error: 'Имя пользователя не должно превышать 50 символов' });
-    if (email.length > 100) return res.status(400).json({ error: 'Email не должен превышать 100 символов' });
+    if (username.length > 50) return res.status(400).json({ error: 'Username must not exceed 50 characters' });
+    if (email.length > 100) return res.status(400).json({ error: 'Email must not exceed 100 characters' });
 
     try {
       const hash = await bcrypt.hash(password, 10);
@@ -433,45 +434,45 @@ const startServer = async () => {
         const userId = userResult.insertId;
         await db.promise().query('INSERT INTO teachers (user_id) VALUES (?)', [userId]);
         await db.promise().query('COMMIT');
-        res.status(201).json({ message: 'Учитель создан' });
+        res.status(201).json({ message: 'Teacher created' });
       } catch (err) {
         await db.promise().query('ROLLBACK');
         const errorMsg =
           err.code === 'ER_DUP_ENTRY'
             ? err.message.includes('username')
-              ? 'Имя пользователя уже занято'
-              : 'Email уже зарегистрирован'
-            : 'Ошибка при создании учителя';
+              ? 'Username already taken'
+              : 'Email already registered'
+            : 'Error creating teacher';
         res.status(400).json({ error: errorMsg });
       }
     } catch (err) {
-      console.error('Ошибка сервера:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
+      console.error('Server error:', err.stack);
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
-  // Удаление учителя (админ)
+  // Delete teacher (admin only)
   app.delete('/api/teachers/:userId', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Доступ запрещён' });
+      return res.status(403).json({ error: 'Access denied' });
     }
     const { userId } = req.params;
     try {
       const [result] = await db.promise().query('DELETE FROM users WHERE id = ? AND role = ?', [userId, 'teacher']);
       if (result.affectedRows === 0) {
-        return res.status(404).json({ error: 'Учитель не найден' });
+        return res.status(404).json({ error: 'Teacher not found' });
       }
-      res.json({ message: 'Учитель удалён' });
+      res.json({ message: 'Teacher deleted' });
     } catch (err) {
-      console.error('Ошибка при удалении учителя:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
+      console.error('Error deleting teacher:', err.stack);
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
-  // Получение профиля учителя
+  // Get teacher profile
   app.get('/api/teachers/profile', authenticateToken, async (req, res) => {
     if (req.user.role !== 'teacher') {
-      return res.status(403).json({ error: 'Доступ запрещён' });
+      return res.status(403).json({ error: 'Access denied' });
     }
     try {
       const [results] = await db.promise().query(`
@@ -481,97 +482,252 @@ const startServer = async () => {
         LEFT JOIN subjects ON teachers.subject_id = subjects.id
         WHERE users.id = ?
       `, [req.user.id]);
-      if (results.length === 0) return res.status(404).json({ error: 'Учитель не найден' });
+      if (results.length === 0) return res.status(404).json({ error: 'Teacher not found' });
       res.json(results[0]);
     } catch (err) {
-      console.error('Ошибка при получении профиля:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
+      console.error('Error fetching profile:', err.stack);
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
-  // Обновление профиля учителя
+  // Update teacher profile
   app.put('/api/teachers/profile', authenticateToken, async (req, res) => {
     if (req.user.role !== 'teacher') {
-      return res.status(403).json({ error: 'Доступ запрещён' });
+      return res.status(403).json({ error: 'Access denied' });
     }
     const { phone, education, experience, subject_id } = req.body;
     if (!phone || phone.length > 15) {
-      return res.status(400).json({ error: 'Телефон обязателен и не должен превышать 15 символов' });
+      return res.status(400).json({ error: 'Phone is required and must not exceed 15 characters' });
     }
     try {
       const [result] = await db.promise().query(
         'UPDATE teachers SET phone = ?, education = ?, experience = ?, subject_id = ? WHERE user_id = ?',
         [phone, education || null, experience || null, subject_id || null, req.user.id]
       );
-      if (result.affectedRows === 0) return res.status(404).json({ error: 'Учитель не найден' });
-      res.json({ message: 'Профиль обновлён' });
+      if (result.affectedRows === 0) return res.status(404).json({ error: 'Teacher not found' });
+      res.json({ message: 'Profile updated' });
     } catch (err) {
-      console.error('Ошибка при обновлении профиля:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
+      console.error('Error updating profile:', err.stack);
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
-  // Получение зарплаты учителя
+  // Get teacher salary
   app.get('/api/teachers/salary', authenticateToken, async (req, res) => {
     if (req.user.role !== 'teacher') {
-      return res.status(403).json({ error: 'Доступ запрещён' });
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    const { month } = req.query;
+    try {
+      const [teacher] = await db.promise().query('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
+      if (teacher.length === 0) return res.status(404).json({ error: 'Teacher not found' });
+      const teacherId = teacher[0].id;
+
+      let query = `
+        SELECT DATE_FORMAT(schedule, '%Y-%m') AS month, COUNT(*) AS class_count, SUM(price * 0.4) AS total_salary
+        FROM classes
+        WHERE teacher_id = ? AND completed = TRUE
+      `;
+      const params = [teacherId];
+
+      if (month) {
+        query += ' AND DATE_FORMAT(schedule, \'%Y-%m\') = ?';
+        params.push(month);
+      } else {
+        query += ' GROUP BY DATE_FORMAT(schedule, \'%Y-%m\')';
+      }
+
+      query += ' ORDER BY month DESC';
+
+      const [results] = await db.promise().query(query, params);
+      // Ensure total_salary is a number
+      const formattedResults = results.map(item => ({
+        ...item,
+        total_salary: Number(item.total_salary) || 0
+      }));
+      res.json(formattedResults);
+    } catch (err) {
+      console.error('Error in /api/teachers/salary:', err.stack);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+
+  // Mark class as completed (admin only)
+  app.put('/api/classes/:id/complete', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    const { id } = req.params;
+    try {
+      const [result] = await db.promise().query(
+        'UPDATE classes SET completed = TRUE WHERE id = ? AND schedule <= NOW()',
+        [id]
+      );
+      if (result.affectedRows === 0) return res.status(404).json({ error: 'Class not found or not yet occurred' });
+      res.json({ message: 'Class marked as completed' });
+    } catch (err) {
+      console.error('Error marking class as completed:', err.stack);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+
+  // Get upcoming classes for teacher
+  app.get('/api/classes/upcoming', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'teacher') {
+      return res.status(403).json({ error: 'Access denied' });
     }
     try {
       const [teacher] = await db.promise().query('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
-      if (teacher.length === 0) return res.status(404).json({ error: 'Учитель не найден' });
+      if (teacher.length === 0) return res.status(404).json({ error: 'Teacher not found' });
       const teacherId = teacher[0].id;
-      const [results] = await db.promise().query(`
-        SELECT DATE_FORMAT(schedule, '%Y-%m') AS month, COUNT(*) AS class_count, SUM(price * 0.4) AS total_salary
-        FROM classes
-        WHERE teacher_id = ? AND schedule <= NOW()
-        GROUP BY DATE_FORMAT(schedule, '%Y-%m')
-        ORDER BY month DESC
-      `, [teacherId]);
-      res.json(results);
-    } catch (err) {
-      console.error('Ошибка при получении зарплаты:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
-    }
-  });
 
-  // Получение списка занятий
-  app.get('/api/classes', authenticateToken, async (req, res) => {
-    try {
-      let query = `
+      const [results] = await db.promise().query(`
         SELECT classes.id, classes.schedule, classes.price, classes.class_type, classes.min_age, classes.max_age,
-               subjects.name AS subject, teachers.id AS teacher_id, users.username AS teacher_name,
-               rooms.name AS room, classes.subject_id, classes.room_id
+               subjects.name AS subject, rooms.name AS room, classes.completed
         FROM classes
         JOIN subjects ON classes.subject_id = subjects.id
-        LEFT JOIN teachers ON classes.teacher_id = teachers.id
-        LEFT JOIN users ON teachers.user_id = users.id
         LEFT JOIN rooms ON classes.room_id = rooms.id
-      `;
-      let params = [];
+        WHERE classes.teacher_id = ? AND (classes.schedule > NOW() OR classes.completed = FALSE)
+        ORDER BY classes.schedule
+      `, [teacherId]);
 
-      if (req.user.role === 'teacher') {
-        const [teacher] = await db.promise().query('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
-        if (teacher.length === 0) return res.status(404).json({ error: 'Преподаватель не найден' });
-        query += ' WHERE classes.teacher_id = ?';
-        params.push(teacher[0].id);
-      }
-
-      const [results] = await db.promise().query(query, params);
       res.json(results);
     } catch (err) {
-      console.error('Ошибка при получении занятий:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
+      console.error('Error fetching upcoming classes:', err.stack);
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
-  // Добавление занятия (админ)
+  // Get completed classes for teacher
+  app.get('/api/classes/completed', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'teacher') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    try {
+      const [teacher] = await db.promise().query('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
+      if (teacher.length === 0) return res.status(404).json({ error: 'Teacher not found' });
+      const teacherId = teacher[0].id;
+
+      const [results] = await db.promise().query(`
+        SELECT classes.id, classes.schedule, classes.price, classes.class_type, classes.min_age, classes.max_age,
+               subjects.name AS subject, rooms.name AS room, classes.completed
+        FROM classes
+        JOIN subjects ON classes.subject_id = subjects.id
+        LEFT JOIN rooms ON classes.room_id = rooms.id
+        WHERE classes.teacher_id = ? AND classes.completed = TRUE
+        ORDER BY classes.schedule DESC
+      `, [teacherId]);
+
+      res.json(results);
+    } catch (err) {
+      console.error('Error fetching completed classes:', err.stack);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+
+  // Get classes for weekly view (upcoming)
+  app.get('/api/classes/upcoming/weekly', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'teacher') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    const { startDate } = req.query;
+    if (!startDate) return res.status(400).json({ error: 'Start date is required' });
+
+    try {
+      const [teacher] = await db.promise().query('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
+      if (teacher.length === 0) return res.status(404).json({ error: 'Teacher not found' });
+      const teacherId = teacher[0].id;
+
+      const [results] = await db.promise().query(`
+        SELECT classes.id, classes.schedule, classes.price, classes.class_type, classes.min_age, classes.max_age,
+               subjects.name AS subject, rooms.name AS room, classes.completed
+        FROM classes
+        JOIN subjects ON classes.subject_id = subjects.id
+        LEFT JOIN rooms ON classes.room_id = rooms.id
+        WHERE classes.teacher_id = ?
+        AND classes.schedule BETWEEN ? AND DATE_ADD(?, INTERVAL 7 DAY)
+        AND (classes.schedule > NOW() OR classes.completed = FALSE)
+        ORDER BY classes.schedule
+      `, [teacherId, startDate, startDate]);
+
+      res.json(results);
+    } catch (err) {
+      console.error('Error fetching weekly upcoming classes:', err.stack);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+
+  // Get classes for weekly view (completed)
+  app.get('/api/classes/completed/weekly', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'teacher') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    const { startDate } = req.query;
+    if (!startDate) return res.status(400).json({ error: 'Start date is required' });
+
+    try {
+      const [teacher] = await db.promise().query('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
+      if (teacher.length === 0) return res.status(404).json({ error: 'Teacher not found' });
+      const teacherId = teacher[0].id;
+
+      const [results] = await db.promise().query(`
+        SELECT classes.id, classes.schedule, classes.price, classes.class_type, classes.min_age, classes.max_age,
+               subjects.name AS subject, rooms.name AS room, classes.completed
+        FROM classes
+        JOIN subjects ON classes.subject_id = subjects.id
+        LEFT JOIN rooms ON classes.room_id = rooms.id
+        WHERE classes.teacher_id = ?
+        AND classes.schedule BETWEEN ? AND DATE_ADD(?, INTERVAL 7 DAY)
+        AND classes.completed = TRUE
+        ORDER BY classes.schedule DESC
+      `, [teacherId, startDate, startDate]);
+
+      res.json(results);
+    } catch (err) {
+      console.error('Error fetching weekly completed classes:', err.stack);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+
+  // Get classes for daily view
+  app.get('/api/classes/daily', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'teacher') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    const { date } = req.query;
+    if (!date) return res.status(400).json({ error: 'Date is required' });
+
+    try {
+      const [teacher] = await db.promise().query('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
+      if (teacher.length === 0) return res.status(404).json({ error: 'Teacher not found' });
+      const teacherId = teacher[0].id;
+
+      const [results] = await db.promise().query(`
+        SELECT classes.id, classes.schedule, classes.price, classes.class_type, classes.min_age, classes.max_age,
+               subjects.name AS subject, rooms.name AS room, classes.completed
+        FROM classes
+        JOIN subjects ON classes.subject_id = subjects.id
+        LEFT JOIN rooms ON classes.room_id = rooms.id
+        WHERE classes.teacher_id = ?
+        AND DATE(classes.schedule) = ?
+        ORDER BY classes.schedule
+      `, [teacherId, date]);
+
+      res.json(results);
+    } catch (err) {
+      console.error('Error fetching daily classes:', err.stack);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+
+  // Add class (admin only)
   app.post('/api/classes', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Доступ запрещён' });
+      return res.status(403).json({ error: 'Access denied' });
     }
     const { subject_id, teacher_id, schedule, room_id, price, class_type, min_age, max_age } = req.body;
     if (!subject_id || !teacher_id || !schedule || !class_type || price == null) {
-      return res.status(400).json({ error: 'Все обязательные поля должны быть заполнены' });
+      return res.status(400).json({ error: 'All required fields must be provided' });
     }
     try {
       const [conflicts] = await db.promise().query(`
@@ -579,28 +735,28 @@ const startServer = async () => {
         WHERE teacher_id = ? AND schedule = ?
       `, [teacher_id, schedule]);
       if (conflicts.length > 0) {
-        return res.status(400).json({ error: 'Конфликт расписания: преподаватель уже занят в это время' });
+        return res.status(400).json({ error: 'Schedule conflict: teacher is already booked at this time' });
       }
       await db.promise().query(`
         INSERT INTO classes (subject_id, teacher_id, schedule, room_id, price, class_type, min_age, max_age)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `, [subject_id, teacher_id, schedule, room_id || null, price, class_type, min_age || 3, max_age || 16]);
-      res.status(201).json({ message: 'Занятие добавлено' });
+      res.status(201).json({ message: 'Class added' });
     } catch (err) {
-      console.error('Ошибка при добавлении занятия:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
+      console.error('Error adding class:', err.stack);
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
-  // Обновление занятия (админ)
+  // Update class (admin only)
   app.put('/api/classes/:id', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Доступ запрещён' });
+      return res.status(403).json({ error: 'Access denied' });
     }
     const { id } = req.params;
     const { subject_id, teacher_id, schedule, room_id, price, class_type, min_age, max_age } = req.body;
     if (!subject_id || !teacher_id || !schedule || !class_type || price == null) {
-      return res.status(400).json({ error: 'Все обязательные поля должны быть заполнены' });
+      return res.status(400).json({ error: 'All required fields must be provided' });
     }
     try {
       const [conflicts] = await db.promise().query(`
@@ -608,37 +764,37 @@ const startServer = async () => {
         WHERE teacher_id = ? AND schedule = ? AND id != ?
       `, [teacher_id, schedule, id]);
       if (conflicts.length > 0) {
-        return res.status(400).json({ error: 'Конфликт расписания: преподаватель уже занят в это время' });
+        return res.status(400).json({ error: 'Schedule conflict: teacher is already booked at this time' });
       }
       const [result] = await db.promise().query(`
         UPDATE classes SET subject_id = ?, teacher_id = ?, schedule = ?, room_id = ?, price = ?, class_type = ?, min_age = ?, max_age = ?
         WHERE id = ?
       `, [subject_id, teacher_id, schedule, room_id || null, price, class_type, min_age || 3, max_age || 16, id]);
-      if (result.affectedRows === 0) return res.status(404).json({ error: 'Занятие не найдено' });
-      res.json({ message: 'Занятие обновлено' });
+      if (result.affectedRows === 0) return res.status(404).json({ error: 'Class not found' });
+      res.json({ message: 'Class updated' });
     } catch (err) {
-      console.error('Ошибка при обновлении занятия:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
+      console.error('Error updating class:', err.stack);
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
-  // Удаление занятия (админ)
+  // Delete class (admin only)
   app.delete('/api/classes/:id', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Доступ запрещён' });
+      return res.status(403).json({ error: 'Access denied' });
     }
     const { id } = req.params;
     try {
       const [result] = await db.promise().query('DELETE FROM classes WHERE id = ?', [id]);
-      if (result.affectedRows === 0) return res.status(404).json({ error: 'Занятие не найдено' });
-      res.json({ message: 'Занятие удалено' });
+      if (result.affectedRows === 0) return res.status(404).json({ error: 'Class not found' });
+      res.json({ message: 'Class deleted' });
     } catch (err) {
-      console.error('Ошибка при удалении занятия:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
+      console.error('Error deleting class:', err.stack);
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
-  // Получение записанных детей на занятие
+  // Get enrolled children for a class
   app.get('/api/enrollments/:classId', authenticateToken, async (req, res) => {
     const { classId } = req.params;
     try {
@@ -650,15 +806,15 @@ const startServer = async () => {
       `, [classId]);
       res.json(results);
     } catch (err) {
-      console.error('Ошибка при получении записанных детей:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
+      console.error('Error fetching enrolled children:', err.stack);
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
-  // Статистика учителей (админ)
+  // Teacher statistics (admin only)
   app.get('/api/statistics/teachers', authenticateToken, async (req, res) => {
     if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Доступ запрещён' });
+      return res.status(403).json({ error: 'Access denied' });
     }
     try {
       const [results] = await db.promise().query(`
@@ -674,272 +830,21 @@ const startServer = async () => {
       `);
       res.json(results);
     } catch (err) {
-      console.error('Ошибка при получении статистики:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
+      console.error('Error fetching teacher statistics:', err.stack);
+      res.status(500).json({ error: 'Server error' });
     }
   });
 
-  // Получение списка родителей и их детей (админ)
-  app.get('/api/users/parents-children', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ error: 'Доступ запрещён' });
-    }
-    try {
-      const [results] = await db.promise().query(`
-        SELECT users.id, users.username, users.email, parents.phone,
-               COALESCE(
-                 (
-                   SELECT JSON_ARRAYAGG(
-                     JSON_OBJECT(
-                       'id', children.id,
-                       'name', children.name,
-                       'birth_date', children.birth_date
-                     )
-                   )
-                   FROM children
-                   WHERE children.parent_id = parents.id
-                 ),
-                 '[]'
-               ) AS children
-        FROM users
-        JOIN parents ON users.id = parents.user_id
-        WHERE users.role = 'parent'
-      `);
-      const parents = results.map(parent => ({
-        id: parent.id,
-        username: parent.username,
-        email: parent.email,
-        phone: parent.phone,
-        children: JSON.parse(parent.children)
-      }));
-      res.json(parents);
-    } catch (err) {
-      console.error('Ошибка при получении родителей и детей:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
-    }
-  });
+  
 
-  // Получение профиля родителя
-  app.get('/api/parent/profile', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'parent') {
-      return res.status(403).json({ error: 'Доступ запрещён' });
-    }
-    try {
-      const [results] = await db.promise().query(`
-        SELECT users.username, users.email, parents.phone
-        FROM users
-        JOIN parents ON users.id = parents.user_id
-        WHERE users.id = ?
-      `, [req.user.id]);
-      if (results.length === 0) return res.status(404).json({ error: 'Родитель не найден' });
-      res.json(results[0]);
-    } catch (err) {
-      console.error('Ошибка при получении профиля:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
-    }
-  });
-
-  // Обновление профиля родителя
-  app.put('/api/parent/profile', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'parent') {
-      return res.status(403).json({ error: 'Доступ запрещён' });
-    }
-    const { username, email, phone, password } = req.body;
-    try {
-      await db.promise().query('START TRANSACTION');
-      const userUpdate = {};
-      if (username) userUpdate.username = username;
-      if (email) userUpdate.email = email;
-      if (password) userUpdate.password = await bcrypt.hash(password, 10);
-      if (Object.keys(userUpdate).length > 0) {
-        const fields = Object.keys(userUpdate).map(field => `${field} = ?`).join(', ');
-        const values = Object.values(userUpdate);
-        values.push(req.user.id);
-        await db.promise().query(`UPDATE users SET ${fields} WHERE id = ?`, values);
-      }
-      if (phone) {
-        await db.promise().query('UPDATE parents SET phone = ? WHERE user_id = ?', [phone, req.user.id]);
-      }
-      await db.promise().query('COMMIT');
-      res.json({ message: 'Профиль обновлён' });
-    } catch (err) {
-      await db.promise().query('ROLLBACK');
-      console.error('Ошибка при обновлении профиля:', err.message);
-      const errorMsg =
-        err.code === 'ER_DUP_ENTRY'
-          ? err.message.includes('username')
-            ? 'Имя пользователя уже занято'
-            : 'Email уже зарегистрирован'
-          : 'Ошибка при обновлении профиля';
-      res.status(400).json({ error: errorMsg });
-    }
-  });
-
-  // Получение детей родителя
-  app.get('/api/parent/children', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'parent') {
-      return res.status(403).json({ error: 'Доступ запрещён' });
-    }
-    try {
-      const [results] = await db.promise().query(`
-        SELECT children.id, children.name, children.birth_date
-        FROM children
-        JOIN parents ON children.parent_id = parents.id
-        WHERE parents.user_id = ?
-      `, [req.user.id]);
-      res.json(results);
-    } catch (err) {
-      console.error('Ошибка при получении детей:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
-    }
-  });
-
-  // Добавление ребёнка
-  app.post('/api/parent/children', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'parent') {
-      return res.status(403).json({ error: 'Доступ запрещён' });
-    }
-    const { name, birth_date } = req.body;
-    if (!name || !birth_date) {
-      return res.status(400).json({ error: 'Имя и дата рождения обязательны' });
-    }
-    try {
-      const [parent] = await db.promise().query('SELECT id FROM parents WHERE user_id = ?', [req.user.id]);
-      if (parent.length === 0) return res.status(404).json({ error: 'Родитель не найден' });
-      await db.promise().query('INSERT INTO children (name, birth_date, parent_id) VALUES (?, ?, ?)', [name, birth_date, parent[0].id]);
-      res.status(201).json({ message: 'Ребёнок добавлен' });
-    } catch (err) {
-      console.error('Ошибка при добавлении ребёнка:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
-    }
-  });
-
-  // Обновление ребёнка
-  app.put('/api/parent/children/:childId', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'parent') {
-      return res.status(403).json({ error: 'Доступ запрещён' });
-    }
-    const { childId } = req.params;
-    const { name, birth_date } = req.body;
-    if (!name || !birth_date) {
-      return res.status(400).json({ error: 'Имя и дата рождения обязательны' });
-    }
-    try {
-      const [parent] = await db.promise().query('SELECT id FROM parents WHERE user_id = ?', [req.user.id]);
-      if (parent.length === 0) return res.status(404).json({ error: 'Родитель не найден' });
-      const [result] = await db.promise().query(
-        'UPDATE children SET name = ?, birth_date = ? WHERE id = ? AND parent_id = ?',
-        [name, birth_date, childId, parent[0].id]
-      );
-      if (result.affectedRows === 0) return res.status(404).json({ error: 'Ребёнок не найден' });
-      res.json({ message: 'Данные ребёнка обновлены' });
-    } catch (err) {
-      console.error('Ошибка при обновлении ребёнка:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
-    }
-  });
-
-  // Получение расписания ребёнка (с поддержкой всех детей и прошедших занятий)
-  app.get('/api/parent/schedule/:childId', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'parent') {
-      return res.status(403).json({ error: 'Доступ запрещён' });
-    }
-    const { childId } = req.params;
-    const { includePast } = req.query; // New query param to include past classes
-    try {
-      const [parent] = await db.promise().query('SELECT id FROM parents WHERE user_id = ?', [req.user.id]);
-      if (parent.length === 0) return res.status(404).json({ error: 'Родитель не найден' });
-
-      let query = `
-        SELECT classes.id, classes.schedule, classes.price, classes.class_type, classes.min_age, classes.max_age,
-               subjects.name AS subject, rooms.name AS room
-        FROM enrollments
-        JOIN classes ON enrollments.class_id = classes.id
-        JOIN subjects ON classes.subject_id = subjects.id
-        LEFT JOIN rooms ON classes.room_id = rooms.id
-      `;
-      const params = [];
-
-      if (childId === 'all') {
-        query += ' WHERE enrollments.child_id IN (SELECT id FROM children WHERE parent_id = ?)';
-        params.push(parent[0].id);
-      } else {
-        query += ' WHERE enrollments.child_id = ?';
-        params.push(childId);
-      }
-
-      if (!includePast) {
-        query += ' AND classes.schedule > NOW()';
-      }
-
-      query += ' ORDER BY classes.schedule DESC';
-
-      const [results] = await db.promise().query(query, params);
-      res.json(results);
-    } catch (err) {
-      console.error('Ошибка при получении расписания:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
-    }
-  });
-
-  // Запись ребёнка на занятие
-  app.post('/api/enrollments', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'parent') {
-      return res.status(403).json({ error: 'Доступ запрещён' });
-    }
-    const { child_id, class_id } = req.body;
-    if (!child_id || !class_id) {
-      return res.status(400).json({ error: 'ID ребёнка и занятия обязательны' });
-    }
-    try {
-      const [parent] = await db.promise().query('SELECT id FROM parents WHERE user_id = ?', [req.user.id]);
-      if (parent.length === 0) return res.status(404).json({ error: 'Родитель не найден' });
-      const [child] = await db.promise().query('SELECT id, birth_date FROM children WHERE id = ? AND parent_id = ?', [child_id, parent[0].id]);
-      if (child.length === 0) return res.status(404).json({ error: 'Ребёнок не найден' });
-      const [classData] = await db.promise().query('SELECT min_age, max_age, class_type FROM classes WHERE id = ?', [class_id]);
-      if (classData.length === 0) return res.status(404).json({ error: 'Занятие не найдено' });
-      const age = Math.floor((new Date() - new Date(child[0].birth_date)) / (1000 * 60 * 60 * 24 * 365.25));
-      if (classData[0].class_type === 'group' && (age < classData[0].min_age || age > classData[0].max_age)) {
-        return res.status(400).json({ error: `Возраст ребёнка (${age} лет) не соответствует возрастной группе занятия (${classData[0].min_age}-${classData[0].max_age} лет)` });
-      }
-      await db.promise().query('INSERT INTO enrollments (child_id, class_id) VALUES (?, ?)', [child_id, class_id]);
-      res.status(201).json({ message: 'Ребёнок записан на занятие' });
-    } catch (err) {
-      console.error('Ошибка при записи на занятие:', err.message);
-      const errorMsg = err.code === 'ER_DUP_ENTRY' ? 'Ребёнок уже записан на это занятие' : 'Ошибка при записи на занятие';
-      res.status(400).json({ error: errorMsg });
-    }
-  });
-
-  // Отмена записи ребёнка
-  app.delete('/api/enrollments/:childId/:classId', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'parent') {
-      return res.status(403).json({ error: 'Доступ запрещён' });
-    }
-    const { childId, classId } = req.params;
-    try {
-      const [parent] = await db.promise().query('SELECT id FROM parents WHERE user_id = ?', [req.user.id]);
-      if (parent.length === 0) return res.status(404).json({ error: 'Родитель не найден' });
-      const [result] = await db.promise().query(
-        'DELETE enrollments FROM enrollments JOIN children ON enrollments.child_id = children.id WHERE enrollments.child_id = ? AND enrollments.class_id = ? AND children.parent_id = ?',
-        [childId, classId, parent[0].id]
-      );
-      if (result.affectedRows === 0) return res.status(404).json({ error: 'Запись не найдена' });
-      res.json({ message: 'Запись отменена' });
-    } catch (err) {
-      console.error('Ошибка при отмене записи:', err.message);
-      res.status(500).json({ error: 'Ошибка сервера' });
-    }
-  });
-
-  // Запуск сервера
+  // Start server
   app.listen(port, () => {
-    console.log(`✅ Сервер запущен на http://localhost:${port}`);
+    console.log(`✅ Server running at http://localhost:${port}`);
   });
 };
 
-// Обработка ошибок при запуске
+// Handle startup errors
 startServer().catch(err => {
-  console.error('❌ Ошибка при запуске сервера:', err.message);
+  console.error('❌ Error starting server:', err.stack);
   process.exit(1);
 });
