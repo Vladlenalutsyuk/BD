@@ -28,7 +28,7 @@
             </li>
           </ul>
           <div class="d-flex align-items-center">
-            <span class="me-3 text-muted">Привет, {{ user?.username || 'Гость' }}!</span>
+            <span class="me-3 text-muted">Добро пожаловать, {{ user?.username || 'Гость' }}!</span>
             <button @click="logout" class="btn btn-dark-green">Выйти</button>
           </div>
         </div>
