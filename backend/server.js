@@ -243,11 +243,38 @@ const startServer = async () => {
     }
   });
 
+  // New endpoint: Validate token
+  app.get('/api/auth/validate', (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1]; // Получаем токен из заголовка "Bearer <token>"
+
+    if (!token) {
+      return res.status(401).json({ error: 'Токен отсутствует' });
+    }
+
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET); // Проверяем токен
+      const currentTime = Math.floor(Date.now() / 1000);
+
+      if (decoded.exp < currentTime) {
+        return res.status(401).json({ error: 'Токен истёк' });
+      }
+
+      // Возвращаем информацию о пользователе
+      res.json({
+        valid: true,
+        role: decoded.role,
+        userId: decoded.id,
+      });
+    } catch (err) {
+      res.status(401).json({ error: 'Недействительный токен' });
+    }
+  });
+
   // Get subjects
   app.get('/api/subjects', async (req, res) => {
     try {
       const [results] = await db.promise().query('SELECT * FROM subjects');
-      res.json(results);
+      res.json(results || []);
     } catch (err) {
       console.error('Error fetching subjects:', err.stack);
       res.status(500).json({ error: 'Server error' });
@@ -286,7 +313,7 @@ const startServer = async () => {
         params.push(child_id);
       }
       const [results] = await db.promise().query(query, params);
-      res.json(results);
+      res.json(results || []);
     } catch (err) {
       console.error('Error fetching public classes:', err.stack);
       res.status(500).json({ error: 'Server error' });
@@ -302,7 +329,7 @@ const startServer = async () => {
         JOIN users ON reviews.parent_id = users.id
         WHERE users.role = 'parent'
       `);
-      res.json(results);
+      res.json(results || []);
     } catch (err) {
       console.error('Error fetching reviews:', err.stack);
       res.status(500).json({ error: 'Server error' });
@@ -337,7 +364,7 @@ const startServer = async () => {
         LEFT JOIN subjects ON teachers.subject_id = subjects.id
         WHERE users.role = 'teacher'
       `);
-      res.json(results);
+      res.json(results || []);
     } catch (err) {
       console.error('Error fetching public teacher data:', err.stack);
       res.status(500).json({ error: 'Server error' });
@@ -348,7 +375,7 @@ const startServer = async () => {
   app.get('/api/rooms', authenticateToken, async (req, res) => {
     try {
       const [results] = await db.promise().query('SELECT * FROM rooms');
-      res.json(results);
+      res.json(results || []);
     } catch (err) {
       console.error('Error fetching rooms:', err.stack);
       res.status(500).json({ error: 'Server error' });
@@ -367,7 +394,7 @@ const startServer = async () => {
         JOIN users ON teachers.user_id = users.id
         LEFT JOIN subjects ON teachers.subject_id = subjects.id
       `);
-      res.json(results);
+      res.json(results || []);
     } catch (err) {
       console.error('Error fetching teachers:', err.stack);
       res.status(500).json({ error: 'Server error' });
@@ -384,7 +411,7 @@ const startServer = async () => {
         JOIN users ON teachers.user_id = users.id
         WHERE teachers.subject_id = ?
       `, [subjectId]);
-      res.json(results);
+      res.json(results || []);
     } catch (err) {
       console.error('Error fetching teachers by subject:', err.stack);
       res.status(500).json({ error: 'Server error' });
@@ -404,7 +431,8 @@ const startServer = async () => {
         LEFT JOIN subjects ON teachers.subject_id = subjects.id
         WHERE users.role = 'teacher'
       `);
-      res.json(results);
+      console.log('GET /api/users/teachers - Response:', results);
+      res.json(results || []);
     } catch (err) {
       console.error('Error fetching teacher list:', err.stack);
       res.status(500).json({ error: 'Server error' });
@@ -591,7 +619,7 @@ const startServer = async () => {
         ORDER BY classes.schedule
       `, [teacherId]);
 
-      res.json(results);
+      res.json(results || []);
     } catch (err) {
       console.error('Error fetching upcoming classes:', err.stack);
       res.status(500).json({ error: 'Server error' });
@@ -618,7 +646,7 @@ const startServer = async () => {
         ORDER BY classes.schedule DESC
       `, [teacherId]);
 
-      res.json(results);
+      res.json(results || []);
     } catch (err) {
       console.error('Error fetching completed classes:', err.stack);
       res.status(500).json({ error: 'Server error' });
@@ -650,7 +678,7 @@ const startServer = async () => {
         ORDER BY classes.schedule
       `, [teacherId, startDate, startDate]);
 
-      res.json(results);
+      res.json(results || []);
     } catch (err) {
       console.error('Error fetching weekly upcoming classes:', err.stack);
       res.status(500).json({ error: 'Server error' });
@@ -682,7 +710,7 @@ const startServer = async () => {
         ORDER BY classes.schedule DESC
       `, [teacherId, startDate, startDate]);
 
-      res.json(results);
+      res.json(results || []);
     } catch (err) {
       console.error('Error fetching weekly completed classes:', err.stack);
       res.status(500).json({ error: 'Server error' });
@@ -713,7 +741,7 @@ const startServer = async () => {
         ORDER BY classes.schedule
       `, [teacherId, date]);
 
-      res.json(results);
+      res.json(results || []);
     } catch (err) {
       console.error('Error fetching daily classes:', err.stack);
       res.status(500).json({ error: 'Server error' });
@@ -794,6 +822,75 @@ const startServer = async () => {
     }
   });
 
+  // Get all classes (admin only)
+  app.get('/api/classes', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    try {
+      const [results] = await db.promise().query(`
+        SELECT classes.id, classes.schedule, classes.price, classes.class_type, classes.min_age, classes.max_age,
+               subjects.name AS subject, users.username AS teacher_name, rooms.name AS room,
+               classes.subject_id, classes.teacher_id, classes.room_id, classes.completed
+        FROM classes
+        JOIN subjects ON classes.subject_id = subjects.id
+        LEFT JOIN teachers ON classes.teacher_id = teachers.id
+        LEFT JOIN users ON teachers.user_id = users.id
+        LEFT JOIN rooms ON classes.room_id = rooms.id
+        ORDER BY classes.schedule
+      `);
+      console.log('GET /api/classes - Response:', results);
+      res.json(results || []);
+    } catch (err) {
+      console.error('Error fetching classes:', err.stack);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+
+  // Get parents and their children (admin only)
+  app.get('/api/users/parents-children', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    try {
+      const [results] = await db.promise().query(`
+        SELECT users.id AS user_id, users.username, users.email, parents.phone,
+               children.id AS child_id, children.name AS child_name, children.birth_date
+        FROM users
+        JOIN parents ON users.id = parents.user_id
+        LEFT JOIN children ON parents.id = children.parent_id
+        WHERE users.role = 'parent'
+        ORDER BY users.username, children.name
+      `);
+      // Format the data to group children under their parents
+      const parentsMap = new Map();
+      results.forEach(row => {
+        if (!parentsMap.has(row.user_id)) {
+          parentsMap.set(row.user_id, {
+            user_id: row.user_id,
+            username: row.username,
+            email: row.email,
+            phone: row.phone,
+            children: []
+          });
+        }
+        if (row.child_id) {
+          parentsMap.get(row.user_id).children.push({
+            id: row.child_id,
+            name: row.child_name,
+            birth_date: row.birth_date
+          });
+        }
+      });
+      const formattedResults = Array.from(parentsMap.values());
+      console.log('GET /api/users/parents-children - Response:', formattedResults);
+      res.json(formattedResults || []);
+    } catch (err) {
+      console.error('Error fetching parents and children:', err.stack);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
+
   // Get enrolled children for a class
   app.get('/api/enrollments/:classId', authenticateToken, async (req, res) => {
     const { classId } = req.params;
@@ -804,7 +901,7 @@ const startServer = async () => {
         JOIN children ON enrollments.child_id = children.id
         WHERE enrollments.class_id = ?
       `, [classId]);
-      res.json(results);
+      res.json(results || []);
     } catch (err) {
       console.error('Error fetching enrolled children:', err.stack);
       res.status(500).json({ error: 'Server error' });
@@ -828,14 +925,13 @@ const startServer = async () => {
         LEFT JOIN enrollments ON classes.id = enrollments.class_id
         GROUP BY teachers.id, users.username, subjects.name
       `);
-      res.json(results);
+      console.log('GET /api/statistics/teachers - Response:', results);
+      res.json(results || []);
     } catch (err) {
       console.error('Error fetching teacher statistics:', err.stack);
       res.status(500).json({ error: 'Server error' });
     }
   });
-
-  
 
   // Start server
   app.listen(port, () => {

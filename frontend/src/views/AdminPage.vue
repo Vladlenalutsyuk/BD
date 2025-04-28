@@ -1,839 +1,1001 @@
 <template>
   <div class="admin-page">
-    <div class="header">
-      <h1 class="mb-4 text-center text-success">Панель администратора</h1>
-      <button @click="logout" class="btn btn-dark-green logout-btn">Выйти</button>
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <h3 class="mb-4">Меню</h3>
+      <div
+        class="nav-link"
+        :class="{ active: activeTab === 'dashboard' }"
+        @click="activeTab = 'dashboard'"
+      >
+        <i class="bi bi-house-door"></i> Главная
+      </div>
+      <div
+        class="nav-link"
+        :class="{ active: activeTab === 'teachers' }"
+        @click="activeTab = 'teachers'"
+      >
+        <i class="bi bi-person"></i> Управление учителями
+      </div>
+      <div
+        class="nav-link"
+        :class="{ active: activeTab === 'classes' }"
+        @click="activeTab = 'classes'"
+      >
+        <i class="bi bi-calendar"></i> Управление занятиями
+      </div>
+      <div
+        class="nav-link"
+        :class="{ active: activeTab === 'parents' }"
+        @click="activeTab = 'parents'"
+      >
+        <i class="bi bi-people"></i> Родители и дети
+      </div>
+      <div
+        class="nav-link"
+        :class="{ active: activeTab === 'statistics' }"
+        @click="activeTab = 'statistics'"
+      >
+        <i class="bi bi-bar-chart"></i> Статистика
+      </div>
+      <div class="nav-link text-danger" @click="logout">
+        <i class="bi bi-box-arrow-right"></i> Выйти
+      </div>
     </div>
 
-    <!-- Вкладки -->
-    <ul class="nav nav-tabs mb-4">
-      <li class="nav-item">
-        <a class="nav-link" :class="{ active: activeTab === 'classes' }" @click="activeTab = 'classes'">Занятия</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" :class="{ active: activeTab === 'teachers' }" @click="activeTab = 'teachers'">Учителя</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" :class="{ active: activeTab === 'parentsChildren' }" @click="activeTab = 'parentsChildren'">Родители и дети</a>
-      </li>
-    </ul>
-
-    <!-- Вкладка: Занятия -->
-    <div v-if="activeTab === 'classes'">
-      <!-- Кнопка добавления занятия -->
-      <button class="btn btn-primary mb-3" @click="showAddForm = true">Добавить занятие</button>
-
-      <!-- Фильтр по предмету -->
-      <div class="mb-4">
-        <label class="me-2">Фильтр по предмету:</label>
-        <select v-model="selectedSubjectFilter" @change="filterCalendarEvents" class="form-select d-inline-block w-auto">
-          <option value="">Все предметы</option>
-          <option v-for="subject in subjects" :key="subject.id" :value="subject.id">{{ subject.name }}</option>
-        </select>
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Loading State -->
+      <div v-if="isLoading" class="text-center">
+        <h3>Загрузка данных...</h3>
       </div>
 
-      <!-- Календарь -->
-      <div class="calendar-container">
-        <FullCalendar :options="calendarOptions" />
+      <!-- Error State -->
+      <div v-else-if="hasError" class="text-center">
+        <h3>Ошибка загрузки данных</h3>
+        <p>{{ errorMessage }}</p>
+        <button class="btn btn-dark-green" @click="logout">Выйти и войти снова</button>
       </div>
 
-      <!-- Форма добавления/редактирования занятия -->
-      <div v-if="showAddForm" class="mt-4 card shadow-lg p-4">
-        <h2>{{ isEditing ? 'Редактировать занятие' : 'Добавить занятие' }}</h2>
-        <form @submit.prevent="isEditing ? updateClass() : addClass()">
-          <div class="mb-3">
-            <label for="subject" class="form-label">Предмет</label>
-            <select v-model="newClass.subject_id" @change="onSubjectChange" class="form-select" id="subject" required>
-              <option value="">Выберите предмет</option>
-              <option v-for="subject in subjects" :key="subject.id" :value="subject.id">{{ subject.name }}</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label for="teacher" class="form-label">Преподаватель</label>
-            <select v-model="newClass.teacher_id" class="form-select" id="teacher" required :disabled="!newClass.subject_id || availableTeachers.length === 0">
-              <option value="">Выберите преподавателя</option>
-              <option v-for="teacher in availableTeachers" :key="teacher.id" :value="teacher.id">{{ teacher.username }}</option>
-            </select>
-            <small v-if="newClass.subject_id && availableTeachers.length === 0" class="text-danger">
-              Нет доступных преподавателей для этого предмета
-            </small>
-          </div>
-          <div class="mb-3">
-            <label for="schedule" class="form-label">Дата и время</label>
-            <input v-model="newClass.schedule" type="datetime-local" class="form-control" id="schedule" required />
-          </div>
-          <div class="mb-3">
-            <label for="room" class="form-label">Кабинет</label>
-            <select v-model="newClass.room_id" class="form-select" id="room">
-              <option value="">Без кабинета</option>
-              <option v-for="room in rooms" :key="room.id" :value="room.id">{{ room.name }}</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label for="price" class="form-label">Стоимость</label>
-            <input v-model="newClass.price" type="number" step="0.01" class="form-control" id="price" placeholder="0.00" required />
-          </div>
-          <div class="mb-3">
-            <label for="class_type" class="form-label">Тип занятия</label>
-            <select v-model="newClass.class_type" class="form-select" id="class_type" required @change="onClassTypeChange">
-              <option value="">Выберите тип</option>
-              <option value="group">Групповое</option>
-              <option value="individual">Индивидуальное</option>
-            </select>
-          </div>
-          <div class="mb-3" v-if="newClass.class_type === 'group'">
-            <label for="age_group" class="form-label">Возрастная группа</label>
-            <select v-model="newClass.age_group" class="form-select" id="age_group" required>
-              <option value="">Выберите возрастную группу</option>
-              <option value="3-6">3-6 лет</option>
-              <option value="7-11">7-11 лет</option>
-              <option value="12-16">12-16 лет</option>
-            </select>
-          </div>
-          <button type="submit" class="btn btn-primary">{{ isEditing ? 'Сохранить' : 'Добавить' }}</button>
-          <button type="button" class="btn btn-secondary ms-2" @click="resetForm">Отмена</button>
-        </form>
-      </div>
-
-      <!-- Модальное окно для деталей занятия -->
-      <div v-if="selectedClass" class="modal fade show d-block" tabindex="-1" style="background: rgba(0, 0, 0, 0.5);">
-        <div class="modal-dialog modal-dialog-centered">
-          <div class="modal-content shadow-lg">
-            <div class="modal-header bg-success text-white">
-              <h5 class="modal-title">Детали занятия: {{ selectedClass.subject }}</h5>
-              <button type="button" class="btn-close btn-close-white" @click="clearSelection"></button>
+      <!-- Dashboard Tab -->
+      <div v-else-if="activeTab === 'dashboard'">
+        <h1>Добро пожаловать, администратор!</h1>
+        <div class="row">
+          <div class="col-md-4 mb-4">
+            <div class="card p-3">
+              <h3>Всего учителей</h3>
+              <p class="display-6">{{ teachers.length }}</p>
             </div>
-            <div class="modal-body">
-              <p><strong>Тип занятия:</strong> 
-                <span :class="selectedClass.class_type === 'individual' ? 'badge bg-primary' : 'badge bg-success'">
-                  {{ selectedClass.class_type === 'individual' ? 'Индивидуальное' : 'Групповое' }}
-                </span>
-              </p>
-              <p v-if="selectedClass.class_type === 'group'"><strong>Возрастная группа:</strong> {{ selectedClass.min_age }}-{{ selectedClass.max_age }} лет</p>
-              <p><strong>Время:</strong> {{ new Date(selectedClass.schedule).toLocaleString('ru-RU') }}</p>
-              <p><strong>Кабинет:</strong> {{ selectedClass.room || 'Не указан' }}</p>
-              <p><strong>Стоимость:</strong> {{ selectedClass.price || 0 }} руб.</p>
-              <h6>Записанные дети:</h6>
-              <ul class="list-group">
-                <li v-for="child in enrolledChildren" :key="child.id" class="list-group-item">
-                  {{ child.name }} (Дата рождения: {{ new Date(child.birth_date).toLocaleDateString('ru-RU') }})
-                </li>
-                <li v-if="!enrolledChildren.length" class="list-group-item text-muted">Нет записанных детей</li>
-              </ul>
+          </div>
+          <div class="col-md-4 mb-4">
+            <div class="card p-3">
+              <h3>Всего занятий</h3>
+              <p class="display-6">{{ classes.length }}</p>
             </div>
-            <div class="modal-footer">
-              <button class="btn btn-primary" @click="editClass">Редактировать</button>
-              <button class="btn btn-danger" @click="deleteClass(selectedClass.id)">Удалить</button>
-              <button class="btn btn-secondary" @click="clearSelection">Закрыть</button>
+          </div>
+          <div class="col-md-4 mb-4">
+            <div class="card p-3">
+              <h3>Всего родителей</h3>
+              <p class="display-6">{{ parents.length }}</p>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Вкладка: Учителя -->
-    <div v-if="activeTab === 'teachers'">
-      <!-- Форма добавления учителя -->
-      <div class="card shadow-lg p-4 mb-4">
-        <h2>Добавить нового учителя</h2>
-        <form @submit.prevent="addTeacher">
-          <div class="mb-3">
-            <label for="teacherUsername" class="form-label">Имя пользователя</label>
-            <input v-model="newTeacher.username" type="text" id="teacherUsername" class="form-control" required />
-          </div>
-          <div class="mb-3">
-            <label for="teacherEmail" class="form-label">Email</label>
-            <input v-model="newTeacher.email" type="email" id="teacherEmail" class="form-control" required />
-          </div>
-          <div class="mb-3">
-            <label for="teacherPassword" class="form-label">Пароль</label>
-            <input v-model="newTeacher.password" type="password" id="teacherPassword" class="form-control" required />
-          </div>
-          <button type="submit" class="btn btn-primary">Создать учителя</button>
-        </form>
-      </div>
-
-      <!-- Список учителей -->
-      <h2>Список преподавателей</h2>
-      <table class="table table-striped shadow-lg">
-        <thead class="table-success">
-          <tr>
-            <th>Имя</th>
-            <th>Email</th>
-            <th>Предмет</th>
-            <th>Телефон</th>
-            <th>Действия</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="teacher in teachersList" :key="teacher.id">
-            <td>{{ teacher.username }}</td>
-            <td>{{ teacher.email }}</td>
-            <td>{{ teacher.subject_name || 'Не указан' }}</td>
-            <td>{{ teacher.phone || 'Не указан' }}</td>
-            <td>
-              <button class="btn btn-danger btn-sm" @click="deleteTeacher(teacher.user_id)">Удалить</button>
-            </td>
-          </tr>
-          <tr v-if="!teachersList.length">
-            <td colspan="5" class="text-center">Преподаватели не найдены</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <!-- Статистика учителей -->
-      <h2 class="mt-4">Статистика преподавателей</h2>
-      <button class="btn btn-primary mb-3" @click="exportTeacherStatsToCSV">Экспорт в CSV</button>
-      <div class="row">
-        <div v-for="stat in teacherStats" :key="stat.teacher_name + stat.subject_name" class="col-md-4 mb-3">
-          <div class="card shadow-lg h-100">
-            <div class="card-body text-center">
-              <h5 class="card-title">{{ stat.teacher_name }}</h5>
-              <p class="card-text"><strong>Предмет:</strong> {{ stat.subject_name }}</p>
-              <p class="card-text"><strong>Занятий:</strong> {{ stat.class_count }}</p>
-              <p class="card-text"><strong>Учеников:</strong> {{ stat.total_students }}</p>
-              <p class="card-text"><strong>Выручка:</strong> {{ stat.total_revenue }} руб.</p>
+      <!-- Manage Teachers Tab -->
+      <div v-else-if="activeTab === 'teachers'">
+        <h2>Управление учителями</h2>
+        <div class="mb-4">
+          <h3>Добавить нового учителя</h3>
+          <form @submit.prevent="createTeacher">
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label for="teacher-username" class="form-label">Имя пользователя</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="teacher-username"
+                  v-model="newTeacher.username"
+                  required
+                />
+              </div>
+              <div class="col-md-4 mb-3">
+                <label for="teacher-email" class="form-label">Email</label>
+                <input
+                  type="email"
+                  class="form-control"
+                  id="teacher-email"
+                  v-model="newTeacher.email"
+                  required
+                />
+              </div>
+              <div class="col-md-4 mb-3">
+                <label for="teacher-password" class="form-label">Пароль</label>
+                <input
+                  type="password"
+                  class="form-control"
+                  id="teacher-password"
+                  v-model="newTeacher.password"
+                  required
+                />
+              </div>
             </div>
-          </div>
+            <button type="submit" class="btn btn-dark-green">Добавить учителя</button>
+          </form>
         </div>
-        <div v-if="!teacherStats.length" class="col-12 text-center">
-          <p class="text-muted">Статистика недоступна</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Вкладка: Родители и дети -->
-    <div v-if="activeTab === 'parentsChildren'">
-      <h2 class="mt-4">Родители и дети</h2>
-      <!-- Поиск -->
-      <div class="mb-4">
-        <label class="me-2">Поиск по имени:</label>
-        <input v-model="searchQuery" type="text" class="form-control d-inline-block w-50" placeholder="Введите имя родителя или ребёнка..." />
-      </div>
-
-      <!-- Список родителей и детей -->
-      <div v-for="parent in filteredParentsChildren" :key="parent.id" class="card shadow-lg mb-3">
-        <div class="card-body">
-          <h4 class="card-title text-success">{{ parent.username }}</h4>
-          <p><strong>Email:</strong> {{ parent.email }}</p>
-          <p><strong>Телефон:</strong> {{ parent.phone }}</p>
-          <h5 class="mt-3">Дети:</h5>
+        <h3>Список учителей</h3>
+        <div class="table-responsive">
           <table class="table table-striped">
-            <thead>
+            <thead class="table-success">
               <tr>
                 <th>Имя</th>
-                <th>Дата рождения</th>
+                <th>Email</th>
+                <th>Телефон</th>
+                <th>Предмет</th>
+                <th>Действия</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="child in parent.children" :key="child.id">
-                <td>{{ child.name }}</td>
-                <td>{{ new Date(child.birth_date).toLocaleDateString('ru-RU') }}</td>
-              </tr>
-              <tr v-if="!parent.children.length">
-                <td colspan="2" class="text-center">Нет детей</td>
+              <tr v-for="teacher in teachers" :key="teacher.user_id">
+                <td>{{ teacher.username }}</td>
+                <td>{{ teacher.email }}</td>
+                <td>{{ teacher.phone || 'Не указан' }}</td>
+                <td>{{ teacher.subject_name || 'Не указан' }}</td>
+                <td>
+                  <button
+                    class="btn btn-danger btn-sm"
+                    @click="deleteTeacher(teacher.user_id)"
+                  >
+                    Удалить
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
-      <div v-if="!filteredParentsChildren.length" class="text-center text-muted">
-        <p>Родители не найдены</p>
+
+      <!-- Manage Classes Tab -->
+      <div v-else-if="activeTab === 'classes'">
+        <h2>Управление занятиями</h2>
+        <div class="mb-4">
+          <h3>Добавить новое занятие</h3>
+          <form @submit.prevent="createClass">
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label for="subject" class="form-label">Предмет</label>
+                <select class="form-select" v-model="newClass.subject_id" required>
+                  <option value="" disabled>Выберите предмет</option>
+                  <option v-for="subject in subjects" :key="subject.id" :value="subject.id">
+                    {{ subject.name }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label for="teacher" class="form-label">Учитель</label>
+                <select class="form-select" v-model="newClass.teacher_id" required>
+                  <option value="" disabled>Выберите учителя</option>
+                  <option v-for="teacher in filteredTeachers" :key="teacher.user_id" :value="teacher.user_id">
+                    {{ teacher.username }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label for="schedule" class="form-label">Дата и время</label>
+                <input
+                  type="datetime-local"
+                  class="form-control"
+                  v-model="newClass.schedule"
+                  required
+                />
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label for="room" class="form-label">Кабинет</label>
+                <select class="form-select" v-model="newClass.room_id">
+                  <option value="">Без кабинета</option>
+                  <option v-for="room in rooms" :key="room.id" :value="room.id">
+                    {{ room.name }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label for="price" class="form-label">Цена (руб.)</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  v-model.number="newClass.price"
+                  required
+                />
+              </div>
+              <div class="col-md-4 mb-3">
+                <label for="class-type" class="form-label">Тип занятия</label>
+                <select class="form-select" v-model="newClass.class_type" required>
+                  <option value="" disabled>Выберите тип</option>
+                  <option value="group">Групповое</option>
+                  <option value="individual">Индивидуальное</option>
+                </select>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="min-age" class="form-label">Минимальный возраст</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  v-model.number="newClass.min_age"
+                  min="3"
+                  max="15"
+                />
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="max-age" class="form-label">Максимальный возраст</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  v-model.number="newClass.max_age"
+                  min="4"
+                  max="16"
+                />
+              </div>
+            </div>
+            <button type="submit" class="btn btn-dark-green">Добавить занятие</button>
+          </form>
+        </div>
+        <h3>Список занятий</h3>
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead class="table-success">
+              <tr>
+                <th>Предмет</th>
+                <th>Учитель</th>
+                <th>Дата и время</th>
+                <th>Кабинет</th>
+                <th>Цена (руб.)</th>
+                <th>Тип</th>
+                <th>Возраст</th>
+                <th>Статус</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="classItem in classes" :key="classItem.id">
+                <td>{{ classItem.subject }}</td>
+                <td>{{ classItem.teacher_name || 'Не назначен' }}</td>
+                <td>{{ new Date(classItem.schedule).toLocaleString('ru-RU') }}</td>
+                <td>{{ classItem.room || 'Не указан' }}</td>
+                <td>{{ classItem.price }}</td>
+                <td>{{ classItem.class_type === 'group' ? 'Групповое' : 'Индивидуальное' }}</td>
+                <td>{{ classItem.min_age }} - {{ classItem.max_age }}</td>
+                <td>
+                  <span class="badge" :class="classItem.completed ? 'bg-success' : 'bg-warning'">
+                    {{ classItem.completed ? 'Завершено' : 'Ожидается' }}
+                  </span>
+                </td>
+                <td>
+                  <button
+                    class="btn btn-dark-green btn-sm me-2"
+                    @click="openEditClassModal(classItem)"
+                  >
+                    Редактировать
+                  </button>
+                  <button
+                    v-if="!classItem.completed"
+                    class="btn btn-success btn-sm me-2"
+                    @click="markClassCompleted(classItem.id)"
+                  >
+                    Завершить
+                  </button>
+                  <button
+                    class="btn btn-danger btn-sm"
+                    @click="deleteClass(classItem.id)"
+                  >
+                    Удалить
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Manage Parents Tab -->
+      <div v-else-if="activeTab === 'parents'">
+        <h2>Управление родителями</h2>
+        <h3>Список родителей и детей</h3>
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead class="table-success">
+              <tr>
+                <th>Имя родителя</th>
+                <th>Email</th>
+                <th>Телефон</th>
+                <th>Дети</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="parent in parents" :key="parent.user_id">
+                <td>{{ parent.username }}</td>
+                <td>{{ parent.email }}</td>
+                <td>{{ parent.phone || 'Не указан' }}</td>
+                <td>
+                  <ul class="mb-0">
+                    <li v-for="child in parent.children" :key="child.id">
+                      {{ child.name }} ({{ new Date(child.birth_date).toLocaleDateString('ru-RU') }})
+                    </li>
+                    <li v-if="parent.children.length === 0">Нет детей</li>
+                  </ul>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Statistics Tab -->
+      <div v-else-if="activeTab === 'statistics'">
+        <h2>Статистика</h2>
+        <h3>Статистика по учителям</h3>
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead class="table-success">
+              <tr>
+                <th>Учитель</th>
+                <th>Предмет</th>
+                <th>Количество занятий</th>
+                <th>Количество учеников</th>
+                <th>Общий доход (руб.)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="stat in statistics" :key="stat.teacher_name">
+                <td>{{ stat.teacher_name }}</td>
+                <td>{{ stat.subject_name || 'Не указан' }}</td>
+                <td>{{ stat.class_count }}</td>
+                <td>{{ stat.total_students }}</td>
+                <td>{{ stat.total_revenue || 0 }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal for Editing Class -->
+    <div
+      class="modal fade"
+      id="editClassModal"
+      tabindex="-1"
+      aria-labelledby="editClassModalLabel"
+      aria-hidden="true"
+      ref="editClassModal"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="editClassModalLabel">Редактировать занятие</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form @submit.prevent="updateClass">
+              <div class="mb-3">
+                <label for="edit-subject" class="form-label">Предмет</label>
+                <select class="form-select" v-model="editClass.subject_id" required>
+                  <option value="" disabled>Выберите предмет</option>
+                  <option v-for="subject in subjects" :key="subject.id" :value="subject.id">
+                    {{ subject.name }}
+                  </option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label for="edit-teacher" class="form-label">Учитель</label>
+                <select class="form-select" v-model="editClass.teacher_id" required>
+                  <option value="" disabled>Выберите учителя</option>
+                  <option v-for="teacher in filteredTeachers" :key="teacher.user_id" :value="teacher.user_id">
+                    {{ teacher.username }}
+                  </option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label for="edit-schedule" class="form-label">Дата и время</label>
+                <input
+                  type="datetime-local"
+                  class="form-control"
+                  v-model="editClass.schedule"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label for="edit-room" class="form-label">Кабинет</label>
+                <select class="form-select" v-model="editClass.room_id">
+                  <option value="">Без кабинета</option>
+                  <option v-for="room in rooms" :key="room.id" :value="room.id">
+                    {{ room.name }}
+                  </option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label for="edit-price" class="form-label">Цена (руб.)</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  v-model.number="editClass.price"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label for="edit-class-type" class="form-label">Тип занятия</label>
+                <select class="form-select" v-model="editClass.class_type" required>
+                  <option value="" disabled>Выберите тип</option>
+                  <option value="group">Групповое</option>
+                  <option value="individual">Индивидуальное</option>
+                </select>
+              </div>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label for="edit-min-age" class="form-label">Минимальный возраст</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    v-model.number="editClass.min_age"
+                    min="3"
+                    max="15"
+                  />
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label for="edit-max-age" class="form-label">Максимальный возраст</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    v-model.number="editClass.max_age"
+                    min="4"
+                    max="16"
+                  />
+                </div>
+              </div>
+              <button type="submit" class="btn btn-dark-green" data-bs-dismiss="modal">Сохранить</button>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
-<script>
+<script lang="ts">
+import { defineComponent } from 'vue';
 import axios from 'axios';
-import FullCalendar from '@fullcalendar/vue3';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid';
-import listPlugin from '@fullcalendar/list';
-import interactionPlugin from '@fullcalendar/interaction';
+import Toast from 'vue-toastification';
+import { AxiosError } from 'axios';
 
-export default {
-  components: { FullCalendar },
+interface Teacher {
+  user_id: string;
+  username: string;
+  email: string;
+  phone?: string;
+  subject_name?: string;
+}
+
+interface ClassItem {
+  id: string;
+  subject: string;
+  teacher_name?: string;
+  schedule: string;
+  room?: string;
+  price: number;
+  class_type: 'group' | 'individual';
+  min_age: number;
+  max_age: number;
+  completed: boolean;
+  subject_id: string;
+  teacher_id: string;
+  room_id?: string;
+}
+
+interface Parent {
+  user_id: string;
+  username: string;
+  email: string;
+  phone?: string;
+  children: Child[];
+}
+
+interface Child {
+  id: string;
+  name: string;
+  birth_date: string;
+}
+
+interface Statistic {
+  teacher_name: string;
+  subject_name?: string;
+  class_count: number;
+  total_students: number;
+  total_revenue?: number;
+}
+
+interface Subject {
+  id: string;
+  name: string;
+}
+
+interface Room {
+  id: string;
+  name: string;
+}
+
+interface NewTeacher {
+  username: string;
+  email: string;
+  password: string;
+}
+
+interface NewClass {
+  subject_id: string;
+  teacher_id: string;
+  schedule: string;
+  room_id: string;
+  price: number;
+  class_type: string;
+  min_age: number;
+  max_age: number;
+}
+
+interface EditClass {
+  id: string | null;
+  subject_id: string;
+  teacher_id: string;
+  schedule: string;
+  room_id: string;
+  price: number;
+  class_type: string;
+  min_age: number;
+  max_age: number;
+}
+
+export default defineComponent({
+  name: 'AdminPage',
   data() {
     return {
-      activeTab: 'classes',
-      classes: [],
-      subjects: [],
-      rooms: [],
-      teachers: [],
-      availableTeachers: [],
-      teachersList: [],
-      teacherStats: [],
-      parentsChildren: [],
-      searchQuery: '',
-      showAddForm: false,
-      isEditing: false,
-      editingClassId: null,
+      activeTab: 'dashboard' as 'dashboard' | 'teachers' | 'classes' | 'parents' | 'statistics',
+      isLoading: true,
+      hasError: false,
+      errorMessage: '',
+      teachers: [] as Teacher[],
+      classes: [] as ClassItem[],
+      parents: [] as Parent[],
+      statistics: [] as Statistic[],
+      subjects: [] as Subject[],
+      rooms: [] as Room[],
+      filteredTeachers: [] as Teacher[],
+      newTeacher: {
+        username: '',
+        email: '',
+        password: '',
+      } as NewTeacher,
       newClass: {
         subject_id: '',
         teacher_id: '',
         schedule: '',
         room_id: '',
-        price: '',
+        price: 0,
         class_type: '',
-        age_group: '',
-      },
-      selectedClass: null,
-      selectedEvent: null,
-      selectedSubjectFilter: '',
-      enrolledChildren: [],
-      newTeacher: {
-        username: '',
-        email: '',
-        password: '',
-      },
-      calendarOptions: {
-        plugins: [dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin],
-        initialView: 'dayGridMonth',
-        events: [],
-        editable: true,
-        selectable: true,
-        eventClick: this.handleEventClick,
-        eventDrop: this.handleEventDrop,
-        headerToolbar: {
-          left: 'prev,next today',
-          center: 'title',
-          right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek',
-        },
-        locale: 'ru',
-        buttonText: {
-          today: 'Сегодня',
-          month: 'Месяц',
-          week: 'Неделя',
-          day: 'День',
-          list: 'Список',
-        },
-        height: 'auto',
-        contentHeight: 'auto',
-        eventBackgroundColor: '#2e7d32',
-        eventBorderColor: '#256528',
-      },
-    };
-  },
-  computed: {
-    filteredParentsChildren() {
-      if (!this.searchQuery) return this.parentsChildren;
-      const query = this.searchQuery.toLowerCase();
-      return this.parentsChildren.filter(parent => {
-        const parentMatch = parent.username.toLowerCase().includes(query);
-        const childMatch = parent.children.some(child => child.name.toLowerCase().includes(query));
-        return parentMatch || childMatch;
-      });
-    },
-  },
-  methods: {
-    logout() {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      this.$router.push('/login');
-    },
-    getAuthHeaders() {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        this.showToast('Сессия истекла, войдите снова', 'error');
-        this.logout();
-        return null;
-      }
-      return { Authorization: `Bearer ${token}` };
-    },
-    async fetchClasses() {
-      const headers = this.getAuthHeaders();
-      if (!headers) return;
-      try {
-        const response = await axios.get('http://localhost:3000/api/classes', { headers });
-        this.classes = response.data;
-        this.updateCalendarEvents();
-      } catch (error) {
-        this.handleError(error, 'Ошибка при загрузке занятий');
-      }
-    },
-    async fetchSubjects() {
-      try {
-        const response = await axios.get('http://localhost:3000/api/subjects');
-        this.subjects = response.data;
-      } catch (error) {
-        this.showToast('Ошибка при загрузке предметов: ' + (error.response?.data?.error || error.message), 'error');
-      }
-    },
-    async fetchRooms() {
-      const headers = this.getAuthHeaders();
-      if (!headers) return;
-      try {
-        const response = await axios.get('http://localhost:3000/api/rooms', { headers });
-        this.rooms = response.data;
-      } catch (error) {
-        this.handleError(error, 'Ошибка при загрузке кабинетов');
-      }
-    },
-    async fetchTeachers() {
-      const headers = this.getAuthHeaders();
-      if (!headers) return;
-      try {
-        const response = await axios.get('http://localhost:3000/api/teachers', { headers });
-        this.teachers = response.data;
-      } catch (error) {
-        this.handleError(error, 'Ошибка при загрузке преподавателей');
-      }
-    },
-    async fetchTeachersBySubject(subjectId) {
-      const headers = this.getAuthHeaders();
-      if (!headers) return;
-      try {
-        const response = await axios.get(`http://localhost:3000/api/teachers/by-subject/${subjectId}`, { headers });
-        this.availableTeachers = response.data;
-        if (this.availableTeachers.length > 0 && !this.newClass.teacher_id) {
-          this.newClass.teacher_id = this.availableTeachers[0].id;
-        } else if (this.availableTeachers.length === 0) {
-          this.newClass.teacher_id = '';
-        }
-      } catch (error) {
-        this.handleError(error, 'Ошибка при загрузке преподавателей по предмету');
-        this.availableTeachers = [];
-        this.newClass.teacher_id = '';
-      }
-    },
-    async fetchTeachersList() {
-      const headers = this.getAuthHeaders();
-      if (!headers) return;
-      try {
-        const response = await axios.get('http://localhost:3000/api/users/teachers', { headers });
-        this.teachersList = response.data;
-      } catch (error) {
-        this.handleError(error, 'Ошибка при загрузке списка преподавателей');
-      }
-    },
-    async fetchTeacherStats() {
-      const headers = this.getAuthHeaders();
-      if (!headers) return;
-      try {
-        const response = await axios.get('http://localhost:3000/api/statistics/teachers', { headers });
-        this.teacherStats = response.data;
-      } catch (error) {
-        this.handleError(error, 'Ошибка при загрузке статистики');
-      }
-    },
-    async fetchParentsChildren() {
-      const headers = this.getAuthHeaders();
-      if (!headers) return;
-      try {
-        const response = await axios.get('http://localhost:3000/api/users/parents-children', { headers });
-        this.parentsChildren = response.data;
-      } catch (error) {
-        this.handleError(error, 'Ошибка при загрузке списка родителей и детей');
-        this.parentsChildren = [];
-      }
-    },
-    async addClass() {
-      const headers = this.getAuthHeaders();
-      if (!headers) return;
-      try {
-        const newClass = {
-          subject_id: parseInt(this.newClass.subject_id),
-          teacher_id: parseInt(this.newClass.teacher_id),
-          schedule: this.newClass.schedule,
-          room_id: this.newClass.room_id ? parseInt(this.newClass.room_id) : null,
-          price: parseFloat(this.newClass.price) || 0.00,
-          class_type: this.newClass.class_type,
-          min_age: this.newClass.class_type === 'group' ? parseInt(this.newClass.age_group.split('-')[0]) : 3,
-          max_age: this.newClass.class_type === 'group' ? parseInt(this.newClass.age_group.split('-')[1]) : 16,
-        };
-        await axios.post('http://localhost:3000/api/classes', newClass, { headers });
-        this.showToast('Занятие добавлено!', 'success');
-        this.resetForm();
-        this.fetchClasses();
-      } catch (error) {
-        this.handleError(error, 'Ошибка при добавлении занятия');
-      }
-    },
-    async updateClass() {
-      const headers = this.getAuthHeaders();
-      if (!headers) return;
-      try {
-        const updatedClass = {
-          subject_id: parseInt(this.newClass.subject_id),
-          teacher_id: parseInt(this.newClass.teacher_id),
-          schedule: this.newClass.schedule,
-          room_id: this.newClass.room_id ? parseInt(this.newClass.room_id) : null,
-          price: parseFloat(this.newClass.price) || 0.00,
-          class_type: this.newClass.class_type,
-          min_age: this.newClass.class_type === 'group' ? parseInt(this.newClass.age_group.split('-')[0]) : 3,
-          max_age: this.newClass.class_type === 'group' ? parseInt(this.newClass.age_group.split('-')[1]) : 16,
-        };
-        await axios.put(`http://localhost:3000/api/classes/${this.editingClassId}`, updatedClass, { headers });
-        this.showToast('Занятие обновлено!', 'success');
-        this.resetForm();
-        this.fetchClasses();
-      } catch (error) {
-        this.handleError(error, 'Ошибка при обновлении занятия');
-      }
-    },
-    async deleteClass(classId) {
-      const headers = this.getAuthHeaders();
-      if (!headers) return;
-      if (!confirm('Вы уверены, что хотите удалить это занятие?')) return;
-      try {
-        await axios.delete(`http://localhost:3000/api/classes/${classId}`, { headers });
-        this.showToast('Занятие удалено!', 'success');
-        this.clearSelection();
-        this.fetchClasses();
-      } catch (error) {
-        this.handleError(error, 'Ошибка при удалении занятия');
-      }
-    },
-    async addTeacher() {
-      const headers = this.getAuthHeaders();
-      if (!headers) return;
-      if (!this.newTeacher.username || !this.newTeacher.email || !this.newTeacher.password) {
-        this.showToast('Все поля обязательны', 'error');
-        return;
-      }
-      try {
-        await axios.post('http://localhost:3000/api/teachers', this.newTeacher, { headers });
-        this.showToast('Учитель создан!', 'success');
-        this.newTeacher = { username: '', email: '', password: '' };
-        this.fetchTeachersList();
-      } catch (error) {
-        this.handleError(error, 'Ошибка при создании учителя');
-      }
-    },
-    async deleteTeacher(userId) {
-      const headers = this.getAuthHeaders();
-      if (!headers) return;
-      if (!confirm('Вы уверены, что хотите удалить этого учителя?')) return;
-      try {
-        await axios.delete(`http://localhost:3000/api/teachers/${userId}`, { headers });
-        this.showToast('Учитель удалён!', 'success');
-        this.fetchTeachersList();
-      } catch (error) {
-        this.handleError(error, 'Ошибка при удалении учителя');
-      }
-    },
-    async fetchEnrolledChildren(classId) {
-      const headers = this.getAuthHeaders();
-      if (!headers) return;
-      try {
-        const response = await axios.get(`http://localhost:3000/api/enrollments/${classId}`, { headers });
-        this.enrolledChildren = response.data;
-      } catch (error) {
-        this.handleError(error, 'Ошибка при загрузке списка учеников');
-      }
-    },
-    handleEventClick(info) {
-      const event = info.event;
-      this.selectedClass = this.classes.find(cls => cls.id == event.id);
-      this.selectedEvent = event;
-      this.fetchEnrolledChildren(event.id);
-    },
-    editClass() {
-      if (!this.selectedEvent || !this.selectedClass) return;
-      const props = this.selectedEvent.extendedProps;
-      this.newClass = {
-        subject_id: props.subject_id,
-        teacher_id: props.teacher_id,
-        schedule: this.selectedEvent.start.toISOString().slice(0, 16),
-        room_id: props.room_id || '',
-        price: props.price || '',
-        class_type: this.selectedClass.class_type,
-        age_group: this.selectedClass.class_type === 'group' ? `${this.selectedClass.min_age}-${this.selectedClass.max_age}` : '',
-      };
-      this.isEditing = true;
-      this.editingClassId = this.selectedEvent.id;
-      this.showAddForm = true;
-      this.clearSelection();
-      if (this.newClass.subject_id) {
-        this.fetchTeachersBySubject(this.newClass.subject_id);
-      }
-    },
-    clearSelection() {
-      this.selectedClass = null;
-      this.selectedEvent = null;
-      this.enrolledChildren = [];
-    },
-    handleEventDrop(info) {
-      const headers = this.getAuthHeaders();
-      if (!headers) return;
-      try {
-        const classId = info.event.id;
-        const newSchedule = info.event.start.toISOString();
-        axios.put(`http://localhost:3000/api/classes/${classId}`, { schedule: newSchedule }, { headers })
-          .then(() => {
-            this.showToast('Расписание обновлено!', 'success');
-            this.fetchClasses();
-          })
-          .catch(error => {
-            this.handleError(error, 'Ошибка при обновлении расписания');
-            info.revert();
-          });
-      } catch (error) {
-        this.handleError(error, 'Ошибка при обновлении расписания');
-        info.revert();
-      }
-    },
-    resetForm() {
-      this.showAddForm = false;
-      this.isEditing = false;
-      this.editingClassId = null;
-      this.newClass = {
+        min_age: 3,
+        max_age: 16,
+      } as NewClass,
+      editClass: {
+        id: null,
         subject_id: '',
         teacher_id: '',
         schedule: '',
         room_id: '',
-        price: '',
+        price: 0,
         class_type: '',
-        age_group: '',
-      };
-      this.availableTeachers = [];
+        min_age: 3,
+        max_age: 16,
+      } as EditClass,
+    };
+  },
+  methods: {
+    handleError(error: unknown, defaultMessage: string): string {
+      const err = error as AxiosError<{ error?: string }>;
+      console.error(defaultMessage, err.response?.data?.error || err.message);
+      const errorMessage =
+        err.response?.data?.error || err.message || 'Неизвестная ошибка';
+      return `${defaultMessage}: ${errorMessage}`;
     },
-    onClassTypeChange() {
-      if (this.newClass.class_type !== 'group') {
-        this.newClass.age_group = '';
-      }
-    },
-    onSubjectChange() {
-      if (this.newClass.subject_id) {
-        this.fetchTeachersBySubject(this.newClass.subject_id);
-      } else {
-        this.availableTeachers = [];
-        this.newClass.teacher_id = '';
-      }
-    },
-    handleError(error, defaultMessage) {
-      if (error.response?.status === 403) {
-        this.showToast('Сессия истекла, войдите снова', 'error');
+
+    async validateToken(): Promise<boolean> {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        this.showToast('error', 'Токен отсутствует. Пожалуйста, войдите снова.');
         this.logout();
-      } else if (error.response?.status === 400 && error.response.data?.error?.includes('Конфликт расписания')) {
-        this.showToast(error.response.data.error, 'error');
-      } else {
-        this.showToast(`${defaultMessage}: ${error.response?.data?.error || error.message}`, 'error');
+        return false;
+      }
+
+      try {
+        const response = await axios.get('/api/auth/validate', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!response.data.valid) {
+          this.showToast('error', 'Недействительный токен. Пожалуйста, войдите снова.');
+          this.logout();
+          return false;
+        }
+
+        if (response.data.role !== 'admin') {
+          this.showToast('error', 'Доступ запрещён: требуется роль администратора.');
+          this.logout();
+          return false;
+        }
+
+        return true;
+      } catch (err) {
+        const errorMessage = this.handleError(err, 'Ошибка проверки токена');
+        this.showToast('error', errorMessage);
+        this.logout();
+        return false;
       }
     },
-    showToast(message, type = 'error') {
-      if (this.$toast) {
-        this.$toast[type](message);
-      } else {
-        console[type === 'error' ? 'error' : 'log'](`Toast (${type}): ${message}`);
+
+    async fetchTeachers(): Promise<void> {
+      try {
+        const response = await axios.get('/api/users/teachers', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        });
+        console.log('Teachers response:', response.data);
+        this.teachers = Array.isArray(response.data) ? response.data : [];
+      } catch (err) {
+        this.teachers = [];
+        throw new Error(this.handleError(err, 'Ошибка при загрузке учителей'));
       }
     },
-    exportTeacherStatsToCSV() {
-      const headers = ['Преподаватель', 'Предмет', 'Количество занятий', 'Количество учеников', 'Общая выручка'];
-      const rows = this.teacherStats.map(stat => [
-        stat.teacher_name,
-        stat.subject_name,
-        stat.class_count,
-        stat.total_students,
-        stat.total_revenue,
-      ]);
-      const csvContent = [
-        headers.join(','),
-        ...rows.map(row => row.join(',')),
-      ].join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'teacher_stats.csv';
-      link.click();
-    },
-    updateCalendarEvents() {
-      let filteredClasses = this.classes;
-      if (this.selectedSubjectFilter) {
-        filteredClasses = this.classes.filter(cls => cls.subject_id === parseInt(this.selectedSubjectFilter));
+
+    async fetchClasses(): Promise<void> {
+      try {
+        const response = await axios.get('/api/classes', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        });
+        console.log('Classes response:', response.data);
+        this.classes = Array.isArray(response.data) ? response.data : [];
+      } catch (err) {
+        this.classes = [];
+        throw new Error(this.handleError(err, 'Ошибка при загрузке занятий'));
       }
-      this.calendarOptions.events = filteredClasses.map(cls => ({
-        id: cls.id,
-        title: `${cls.subject} (${cls.teacher_name || 'Нет преподавателя'}) - ${cls.class_type === 'individual' ? 'Индивидуальное' : `Групповое (${cls.min_age}-${cls.max_age} лет)`} - ${cls.price || 0} руб.`,
-        start: cls.schedule,
-        backgroundColor: cls.class_type === 'individual' ? '#007bff' : '#2e7d32',
-        borderColor: cls.class_type === 'individual' ? '#0056b3' : '#256528',
-        extendedProps: {
-          room_id: cls.room_id,
-          room: cls.room,
-          price: cls.price,
-          subject_id: cls.subject_id,
-          teacher_id: cls.teacher_id,
-        },
-      }));
     },
-    filterCalendarEvents() {
-      this.updateCalendarEvents();
+
+    async fetchParents(): Promise<void> {
+      try {
+        const response = await axios.get('/api/users/parents-children', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        });
+        console.log('Parents response:', response.data);
+        this.parents = Array.isArray(response.data) ? response.data : [];
+      } catch (err) {
+        this.parents = [];
+        throw new Error(this.handleError(err, 'Ошибка при загрузке родителей'));
+      }
+    },
+
+    async fetchStatistics(): Promise<void> {
+      try {
+        const response = await axios.get('/api/statistics/teachers', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        });
+        console.log('Statistics response:', response.data);
+        this.statistics = Array.isArray(response.data) ? response.data : [];
+      } catch (err) {
+        this.statistics = [];
+        throw new Error(this.handleError(err, 'Ошибка при загрузке статистики'));
+      }
+    },
+
+    async fetchSubjects(): Promise<void> {
+      try {
+        const response = await axios.get('/api/subjects');
+        console.log('Subjects response:', response.data);
+        this.subjects = Array.isArray(response.data) ? response.data : [];
+      } catch (err) {
+        this.subjects = [];
+        throw new Error(this.handleError(err, 'Ошибка при загрузке предметов'));
+      }
+    },
+
+    async fetchRooms(): Promise<void> {
+      try {
+        const response = await axios.get('/api/rooms', {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        });
+        console.log('Rooms response:', response.data);
+        this.rooms = Array.isArray(response.data) ? response.data : [];
+      } catch (err) {
+        this.rooms = [];
+        throw new Error(this.handleError(err, 'Ошибка при загрузке кабинетов'));
+      }
+    },
+
+    async fetchTeachersBySubject(subjectId: string): Promise<void> {
+      if (!subjectId) {
+        this.filteredTeachers = [];
+        return;
+      }
+      try {
+        const response = await axios.get(`/api/teachers/by-subject/${subjectId}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        });
+        console.log('Filtered teachers response:', response.data);
+        this.filteredTeachers = Array.isArray(response.data) ? response.data : [];
+      } catch (err) {
+        this.filteredTeachers = [];
+        const errorMessage = this.handleError(err, 'Ошибка при загрузке учителей по предмету');
+        this.showToast('error', errorMessage);
+      }
+    },
+
+    async createTeacher(): Promise<void> {
+      try {
+        await axios.post('/api/teachers', this.newTeacher, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        });
+        this.showToast('success', 'Учитель успешно добавлен!');
+        this.newTeacher = { username: '', email: '', password: '' };
+        await this.fetchTeachers();
+      } catch (err) {
+        const errorMessage = this.handleError(err, 'Ошибка при добавлении учителя');
+        this.showToast('error', errorMessage);
+      }
+    },
+
+    async deleteTeacher(userId: string): Promise<void> {
+      if (confirm('Вы уверены, что хотите удалить этого учителя?')) {
+        try {
+          await axios.delete(`/api/teachers/${userId}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+          });
+          this.showToast('success', 'Учитель успешно удалён!');
+          await this.fetchTeachers();
+        } catch (err) {
+          const errorMessage = this.handleError(err, 'Ошибка при удалении учителя');
+          this.showToast('error', errorMessage);
+        }
+      }
+    },
+
+    async createClass(): Promise<void> {
+      try {
+        await axios.post('/api/classes', this.newClass, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        });
+        this.showToast('success', 'Занятие успешно добавлено!');
+        this.newClass = {
+          subject_id: '',
+          teacher_id: '',
+          schedule: '',
+          room_id: '',
+          price: 0,
+          class_type: '',
+          min_age: 3,
+          max_age: 16,
+        };
+        this.filteredTeachers = [];
+        await this.fetchClasses();
+      } catch (err) {
+        const errorMessage = this.handleError(err, 'Ошибка при добавлении занятия');
+        this.showToast('error', errorMessage);
+      }
+    },
+
+    async updateClass(): Promise<void> {
+      try {
+        await axios.put(`/api/classes/${this.editClass.id}`, this.editClass, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        });
+        this.showToast('success', 'Занятие успешно обновлено!');
+        await this.fetchClasses();
+      } catch (err) {
+        const errorMessage = this.handleError(err, 'Ошибка при обновлении занятия');
+        this.showToast('error', errorMessage);
+      }
+    },
+
+    async deleteClass(classId: string): Promise<void> {
+      if (confirm('Вы уверены, что хотите удалить это занятие?')) {
+        try {
+          await axios.delete(`/api/classes/${classId}`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+          });
+          this.showToast('success', 'Занятие успешно удалено!');
+          await this.fetchClasses();
+        } catch (err) {
+          const errorMessage = this.handleError(err, 'Ошибка при удалении занятия');
+          this.showToast('error', errorMessage);
+        }
+      }
+    },
+
+    async markClassCompleted(classId: string): Promise<void> {
+      try {
+        await axios.put(`/api/classes/${classId}/complete`, {}, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        });
+        this.showToast('success', 'Занятие отмечено как завершённое!');
+        await this.fetchClasses();
+      } catch (err) {
+        const errorMessage = this.handleError(err, 'Ошибка при завершении занятия');
+        this.showToast('error', errorMessage);
+      }
+    },
+
+    openEditClassModal(classItem: ClassItem): void {
+      try {
+        this.editClass = {
+          id: classItem.id,
+          subject_id: classItem.subject_id,
+          teacher_id: classItem.teacher_id,
+          schedule: new Date(classItem.schedule).toISOString().slice(0, 16),
+          room_id: classItem.room_id || '',
+          price: classItem.price,
+          class_type: classItem.class_type,
+          min_age: classItem.min_age,
+          max_age: classItem.max_age,
+        };
+        this.fetchTeachersBySubject(classItem.subject_id);
+        const modal = new window.bootstrap.Modal(this.$refs.editClassModal as HTMLElement);
+        modal.show();
+      } catch (error) {
+        console.error('Ошибка при открытии модального окна:', error);
+        this.showToast('error', 'Не удалось открыть модальное окно для редактирования.');
+      }
+    },
+
+    logout(): void {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      this.$emit('user-updated');
+      this.$router.push('/login');
+    },
+
+    showToast(type: string, message: string): void {
+      this.$toast[type](message);
     },
   },
-  watch: {
-    classes() {
-      this.updateCalendarEvents();
-    },
-  },
-  mounted() {
-    const user = JSON.parse(localStorage.getItem('user') || 'null');
-    const token = localStorage.getItem('token');
-    if (!user || !token || user.role !== 'admin') {
-      this.showToast('Сессия истекла или доступ запрещён, войдите снова', 'error');
-      this.logout();
+  async mounted() {
+    this.isLoading = true;
+    this.hasError = false;
+    this.errorMessage = '';
+
+    const isTokenValid = await this.validateToken();
+    if (!isTokenValid) {
+      this.isLoading = false;
       return;
     }
-    this.fetchClasses();
-    this.fetchSubjects();
-    this.fetchRooms();
-    this.fetchTeachers();
-    this.fetchTeachersList();
-    this.fetchTeacherStats();
-    this.fetchParentsChildren();
+
+    try {
+      await Promise.all([
+        this.fetchTeachers(),
+        this.fetchClasses(),
+        this.fetchParents(),
+        this.fetchStatistics(),
+        this.fetchSubjects(),
+        this.fetchRooms(),
+      ]);
+
+      console.log('After fetch - teachers:', this.teachers);
+      console.log('After fetch - classes:', this.classes);
+      console.log('After fetch - parents:', this.parents);
+    } catch (err) {
+      const errorMessage = this.handleError(err, 'Ошибка при загрузке данных');
+      this.hasError = true;
+      this.errorMessage = errorMessage;
+    } finally {
+      this.isLoading = false;
+    }
   },
-};
+  watch: {
+    'newClass.subject_id'(newVal: string) {
+      this.fetchTeachersBySubject(newVal);
+    },
+    'editClass.subject_id'(newVal: string) {
+      this.fetchTeachersBySubject(newVal);
+    },
+  },
+});
 </script>
 
 <style scoped>
+/* General layout */
 .admin-page {
   min-height: 100vh;
-  background-color: #d5f7d5;
-  padding: 20px;
+  background: linear-gradient(135deg, #d5f7d5, #e8f5e9);
   font-family: 'Comic Sans MS', 'Segoe UI', sans-serif;
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.logout-btn {
-  background-color: #2e7d32;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.logout-btn:hover {
-  background-color: #256528;
-}
-
-.btn-primary {
-  background-color: #2e7d32;
-  border: none;
-}
-.btn-primary:hover {
-  background-color: #256528;
-}
-
-.btn-danger {
-  background-color: #d32f2f;
-}
-.btn-danger:hover {
-  background-color: #b71c1c;
-}
-
-.btn-secondary {
-  background-color: #6c757d;
-}
-.btn-secondary:hover {
-  background-color: #5a6268;
-}
-
-.table {
-  background: #f8f9fa;
-  border-radius: 5px;
-}
-.table-striped tbody tr:nth-of-type(odd) {
-  background-color: rgba(0, 0, 0, 0.05);
-}
-
-.nav-tabs .nav-link.active {
-  background-color: #2e7d32;
-  color: white;
-}
-
-.calendar-container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 10px;
+/* Sidebar */
+.sidebar {
+  width: 250px;
   background: #ffffff;
-  border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-  border: 1px solid #2e7d32;
+  padding: 20px;
+  border-right: 1px solid #ddd;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  overflow-y: auto;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-:deep(.fc) {
-  font-family: 'Comic Sans MS', 'Segoe UI', sans-serif;
-}
-
-:deep(.fc .fc-toolbar) {
-  background: #2e7d32;
-  color: white;
-  border-radius: 5px 5px 0 0;
-  padding: 10px;
-}
-
-:deep(.fc .fc-toolbar-title) {
-  font-size: 1.2rem;
-}
-
-:deep(.fc .fc-button) {
-  background-color: #256528;
-  border: none;
-  color: white;
-}
-
-:deep(.fc .fc-button:hover) {
-  background-color: #1b4b1e;
-}
-
-:deep(.fc .fc-daygrid-day) {
-  background: #f8f9fa;
-}
-
-:deep(.fc .fc-daygrid-day:hover) {
-  background: #e0f7fa;
-}
-
-:deep(.fc .fc-daygrid-day-number) {
+.sidebar h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
   color: #2e7d32;
 }
 
-:deep(.fc .fc-day-today) {
-  background: #ffeb3b !important;
-}
-
-:deep(.fc .fc-day-today .fc-daygrid-day-number) {
-  color: #2e7d32 !important;
-  font-weight: bold;
-}
-
-:deep(.fc .fc-event) {
+.nav-link {
+  color: #2e7d32;
+  cursor: pointer;
+  font-weight: 500;
+  padding: 10px 15px;
   border-radius: 5px;
-  font-size: 0.9rem;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  display: flex;
+  align-items: center;
 }
 
-.modal-content {
-  border-radius: 10px;
-  border: none;
+.nav-link i {
+  font-size: 1.1rem;
+  margin-right: 5px;
 }
 
-.modal-header {
-  border-bottom: none;
+.nav-link:hover {
+  background-color: #e8f5e9;
 }
 
-.modal-body {
-  padding: 20px;
+.nav-link.active {
+  background-color: #2e7d32;
+  color: white;
 }
 
-.modal-footer {
-  border-top: none;
+.nav-link.text-danger {
+  color: #dc3545;
 }
 
-.list-group-item {
-  border: none;
-  padding: 10px 0;
+.nav-link.text-danger:hover {
+  background-color: #f8d7da;
 }
 
+/* Main content */
+.main-content {
+  margin-left: 270px;
+  padding: 40px;
+}
+
+.main-content h1 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #2e7d32;
+}
+
+.main-content h2 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.main-content h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 15px;
+}
+
+/* Cards */
 .card {
+  border: none;
+  border-radius: 15px;
+  background: linear-gradient(145deg, #ffffff, #f0f8f0);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -842,12 +1004,193 @@ export default {
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 
-.card-title {
-  color: #2e7d32;
+/* Tables */
+.table {
+  background: #ffffff;
+  border-radius: 10px;
+  overflow: hidden;
 }
 
+.table-striped tbody tr:nth-of-type(odd) {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.table-success {
+  background-color: #2e7d32 !important;
+  color: white;
+}
+
+.table th {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  letter-spacing: 0.5px;
+}
+
+.table td {
+  vertical-align: middle;
+  font-size: 1rem;
+  color: #333;
+}
+
+/* Buttons */
+.btn-dark-green {
+  background-color: #2e7d32;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+}
+
+.btn-dark-green:hover {
+  background-color: #256528;
+}
+
+.btn-dark-green:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.btn-danger {
+  border-radius: 8px;
+}
+
+.btn-success {
+  border-radius: 8px;
+}
+
+/* Form controls */
+.form-control,
+.form-select {
+  border-radius: 8px;
+  border: 1px solid #ced4da;
+  padding: 10px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #2e7d32;
+  box-shadow: 0 0 0 0.2rem rgba(46, 125, 50, 0.25);
+}
+
+.form-label {
+  font-weight: 500;
+  color: #333;
+}
+
+/* Modals */
+.modal-content {
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(145deg, #ffffff, #f0f8f0);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  background-color: #2e7d32;
+  color: white;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+
+.modal-title {
+  font-weight: 600;
+}
+
+.btn-close {
+  filter: invert(1);
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+/* Badges */
 .badge {
   font-size: 0.9em;
   padding: 0.3em 0.6em;
+}
+
+/* Responsive design */
+@media (max-width: 992px) {
+  .sidebar {
+    width: 200px;
+  }
+
+  .main-content {
+    margin-left: 220px;
+    padding: 30px;
+  }
+
+  .main-content h1 {
+    font-size: 2rem;
+  }
+
+  .main-content h2 {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: static;
+    border-right: none;
+    border-bottom: 1px solid #ddd;
+    padding: 15px;
+  }
+
+  .main-content {
+    margin-left: 0;
+    padding: 20px;
+  }
+
+  .nav-link {
+    padding: 8px 10px;
+  }
+
+  .card {
+    padding: 15px;
+  }
+
+  .table th,
+  .table td {
+    font-size: 0.9rem;
+  }
+
+  .btn-dark-green,
+  .btn-danger,
+  .btn-success {
+    padding: 6px 12px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .main-content h1 {
+    font-size: 1.75rem;
+  }
+
+  .main-content h2 {
+    font-size: 1.25rem;
+  }
+
+  .table-responsive {
+    font-size: 0.85rem;
+  }
+
+  .form-control,
+  .form-select {
+    font-size: 0.9rem;
+  }
+
+  .modal-dialog {
+    margin: 10px;
+  }
 }
 </style>

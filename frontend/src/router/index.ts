@@ -6,6 +6,7 @@ import RegisterPage from '../views/RegisterPage.vue';
 import LoginPage from '../views/LoginPage.vue';
 import HomePage from '../views/Home.vue';
 import type { RouteRecordRaw } from 'vue-router';
+import axios, { AxiosError } from 'axios'; // Импортируем AxiosError
 
 const routes: RouteRecordRaw[] = [
   { path: '/', component: HomePage },
@@ -21,7 +22,7 @@ const router = createRouter({
   routes,
 });
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const user = JSON.parse(localStorage.getItem('user') || 'null');
   const token = localStorage.getItem('token');
   console.log('Проверка user:', user);
@@ -30,24 +31,82 @@ router.beforeEach((to, from, next) => {
   if (to.matched.some(record => record.meta.requiresAuth)) {
     if (!user || !token) {
       console.log('Нет авторизации или токена, редирект на /login');
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
       next({ path: '/login' });
-    } else if (to.meta.role && to.meta.role !== user.role) {
-      console.log('Роль не совпадает:', to.meta.role, user.role);
-      next({ path: '/login' });
-    } else {
+      return;
+    }
+
+    try {
+      // Проверяем токен через сервер
+      const response = await axios.get('/api/auth/validate', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.data.valid) {
+        console.log('Недействительный токен, редирект на /login');
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        next({ path: '/login' });
+        return;
+      }
+
+      const userRole = response.data.role;
+
+      if (to.meta.role && to.meta.role !== userRole) {
+        console.log('Роль не совпадает:', to.meta.role, userRole);
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        next({ path: '/login' });
+        return;
+      }
+
       console.log('Проход по маршруту:', to.path);
       next();
+    } catch (err) {
+      // Указываем, что err — это AxiosError
+      const error = err as AxiosError<{ error?: string }>;
+      console.error(
+        'Ошибка проверки токена:',
+        error.response?.data?.error || error.message || 'Неизвестная ошибка'
+      );
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      next({ path: '/login' });
     }
   } else if (to.path === '/login' && user && token) {
-    // Если пользователь уже авторизован, перенаправляем на его страницу
-    console.log('Пользователь уже авторизован, перенаправляем в зависимости от роли');
-    if (user.role === 'parent') {
-      next('/parent');
-    } else if (user.role === 'teacher') {
-      next('/teacher');
-    } else if (user.role === 'admin') {
-      next('/admin');
-    } else {
+    try {
+      // Проверяем токен через сервер
+      const response = await axios.get('/api/auth/validate', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.data.valid) {
+        console.log('Пользователь уже авторизован, перенаправляем в зависимости от роли');
+        const userRole = response.data.role;
+        if (userRole === 'parent') {
+          next('/parent');
+        } else if (userRole === 'teacher') {
+          next('/teacher');
+        } else if (userRole === 'admin') {
+          next('/admin');
+        } else {
+          next();
+        }
+      } else {
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        next();
+      }
+    } catch (err) {
+      // Указываем, что err — это AxiosError
+      const error = err as AxiosError<{ error?: string }>;
+      console.error(
+        'Ошибка проверки токена при входе:',
+        error.response?.data?.error || error.message || 'Неизвестная ошибка'
+      );
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
       next();
     }
   } else {

@@ -1,17 +1,21 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "Node",
+    "target": "esnext",
+    "module": "esnext",
     "strict": true,
+    "jsx": "preserve",
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "noImplicitAny": false,
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
-    }
+    },
+    "types": ["vite/client", "vue-toastification", "vue-router"]
   },
-  "include": ["src/**/*", "src/**/*.vue", "src/router/**/*"],
+  "include": ["src/**/*", "src/**/*.vue", "src/types/**/*.d.ts"],
   "exclude": ["node_modules"]
 }
