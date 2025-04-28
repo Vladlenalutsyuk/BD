@@ -8,3 +8,5 @@ const bcrypt = require('bcrypt');
     console.error('Ошибка при генерации хеша:', error);
   }
 })();
+
+

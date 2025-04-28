@@ -11,9 +11,6 @@
           <a class="nav-link" :class="{ active: activeTab === 'personalAccount' }" @click="activeTab = 'personalAccount'"><i class="fas fa-user me-2"></i> Личный кабинет</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" :class="{ active: activeTab === 'childProfile' }" @click="activeTab = 'childProfile'"><i class="fas fa-child me-2"></i> Профиль ребёнка</a>
-        </li>
-        <li class="nav-item">
           <a class="nav-link" :class="{ active: activeTab === 'enroll' }" @click="activeTab = 'enroll'"><i class="fas fa-calendar-check me-2"></i> Запись на занятия</a>
         </li>
         <li class="nav-item">
@@ -42,6 +39,23 @@
           <p><strong>Телефон:</strong> +7 (123) 456-78-90</p>
           <p><strong>Email:</strong> info@childrencenter.ru</p>
         </div>
+        <div class="card shadow-lg p-4 mb-4">
+          <h3>Наши преподаватели</h3>
+          <div class="row">
+            <div v-for="teacher in teachers" :key="teacher.id" class="col-md-4 mb-3">
+              <div class="card h-100">
+                <div class="card-body">
+                  <h5 class="card-title">{{ teacher.username }}</h5>
+                  <p class="card-text">
+                    <strong>Предмет:</strong> {{ teacher.subject || 'Не указан' }}<br>
+                    <strong>Опыт:</strong> {{ teacher.experience ? `${teacher.experience} лет` : 'Не указан' }}<br>
+                    <strong>Образование:</strong> {{ teacher.education || 'Не указано' }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="card shadow-lg p-4">
           <h3>Отзывы родителей</h3>
           <div v-for="review in reviews" :key="review.id" class="review mb-3 p-3 border rounded">
@@ -61,7 +75,7 @@
       <!-- Вкладка: Личный кабинет -->
       <div v-if="activeTab === 'personalAccount'">
         <h2>Личный кабинет</h2>
-        <div class="card shadow-lg p-4">
+        <div class="card shadow-lg p-4 mb-4">
           <h3>Ваши данные</h3>
           <p><strong>Имя пользователя:</strong> {{ parentProfile.username }}</p>
           <p><strong>Email:</strong> {{ parentProfile.email }}</p>
@@ -100,53 +114,47 @@
             </form>
           </div>
         </div>
-      </div>
 
-      <!-- Вкладка: Профиль ребёнка -->
-      <div v-if="activeTab === 'childProfile'">
-        <h2 class="text-center mb-4">Профиль ребёнка</h2>
-        <div class="mb-4 d-flex justify-content-between align-items-center">
-          <select v-model="selectedChildForProfile" class="form-select w-auto d-inline-block animate__animated animate__fadeIn" @change="animateProfile">
-            <option value="" disabled>Выберите ребенка</option>
-            <option v-for="child in children" :key="child.id" :value="child.id">{{ child.name }}</option>
-          </select>
-          <button @click="showAddChildForm = true" class="btn btn-dark-green"><i class="fas fa-plus-circle me-2"></i> Добавить ребёнка</button>
-        </div>
+        <!-- Ваши дети -->
+        <div class="card shadow-lg p-4">
+          <h3>Ваши дети</h3>
+          <button @click="showAddChildForm = true" class="btn btn-dark-green mb-3"><i class="fas fa-plus-circle me-2"></i> Добавить ребёнка</button>
+          
+          <div v-if="showAddChildForm" class="mb-4">
+            <h4>Добавить ребёнка</h4>
+            <form @submit.prevent="addChild" class="add-child-form">
+              <div class="mb-3">
+                <label for="child_name" class="form-label">Имя ребёнка</label>
+                <input v-model="newChild.name" type="text" id="child_name" class="form-control" placeholder="Введите имя" required />
+              </div>
+              <div class="mb-3">
+                <label for="birth_date" class="form-label">Дата рождения</label>
+                <input v-model="newChild.birth_date" type="date" id="birth_date" class="form-control" required />
+              </div>
+              <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-dark-green w-50"><i class="fas fa-save me-2"></i> Добавить</button>
+                <button type="button" @click="showAddChildForm = false" class="btn btn-secondary w-50"><i class="fas fa-times me-2"></i> Отмена</button>
+              </div>
+            </form>
+          </div>
 
-        <div v-if="showAddChildForm" class="card shadow-lg p-4 mb-5 animate__animated animate__zoomIn">
-          <h3><i class="fas fa-child me-2"></i> Добавить ребёнка</h3>
-          <form @submit.prevent="addChild" class="add-child-form">
-            <div class="mb-3">
-              <label for="child_name" class="form-label">Имя ребёнка</label>
-              <input v-model="newChild.name" type="text" id="child_name" class="form-control" placeholder="Введите имя" required />
+          <div v-if="children.length" class="row">
+            <div v-for="child in children" :key="child.id" class="col-md-4 mb-3">
+              <div class="card h-100">
+                <div class="card-body">
+                  <h5 class="card-title">{{ child.name }}</h5>
+                  <p class="card-text"><strong>Дата рождения:</strong> {{ formatDate(child.birth_date) }}</p>
+                  <button @click="editChild(child)" class="btn btn-dark-green btn-sm"><i class="fas fa-edit me-2"></i> Редактировать</button>
+                </div>
+              </div>
             </div>
-            <div class="mb-3">
-              <label for="birth_date" class="form-label">Дата рождения</label>
-              <input v-model="newChild.birth_date" type="date" id="birth_date" class="form-control" required />
-            </div>
-            <div class="d-flex gap-2">
-              <button type="submit" class="btn btn-dark-green w-50"><i class="fas fa-save me-2"></i> Добавить</button>
-              <button type="button" @click="showAddChildForm = false" class="btn btn-secondary w-50"><i class="fas fa-times me-2"></i> Отмена</button>
-            </div>
-          </form>
-        </div>
-
-        <div v-if="selectedChildForProfile" class="card shadow-lg p-4 animate__animated" :class="profileAnimation">
-          <div class="row align-items-center">
-            <div class="col-md-3 text-center">
-              <img src="https://via.placeholder.com/100?text=Child" class="rounded-circle mb-3" alt="Аватар ребёнка" />
-            </div>
-            <div class="col-md-6">
-              <h3 class="mb-3 text-success">{{ selectedChildData.name }}</h3>
-              <p><strong>Дата рождения:</strong> {{ formatDate(selectedChildData.birth_date) }}</p>
-            </div>
-            <div class="col-md-3 text-md-end">
-              <button @click="editChild" class="btn btn-dark-green"><i class="fas fa-edit me-2"></i> Редактировать</button>
-            </div>
+          </div>
+          <div v-else-if="!showAddChildForm" class="text-center text-muted">
+            У вас нет добавленных детей. Нажмите "Добавить ребёнка", чтобы начать.
           </div>
 
           <div v-if="showEditChildForm" class="mt-4">
-            <h3><i class="fas fa-edit me-2"></i> Редактировать ребёнка</h3>
+            <h4>Редактировать ребёнка</h4>
             <form @submit.prevent="updateChild" class="edit-child-form">
               <div class="mb-3">
                 <label for="edit_child_name" class="form-label">Имя ребёнка</label>
@@ -163,19 +171,13 @@
             </form>
           </div>
         </div>
-        <div v-else-if="!showAddChildForm && children.length" class="text-center text-muted mt-4">
-          Выберите ребёнка для просмотра профиля
-        </div>
-        <div v-if="!children.length && !showAddChildForm" class="text-center text-muted mt-4">
-          У вас нет добавленных детей. Нажмите "Добавить ребёнка", чтобы начать.
-        </div>
       </div>
 
       <!-- Вкладка: Запись на занятия -->
       <div v-if="activeTab === 'enroll'">
         <h2 class="mb-4">Записаться на занятие</h2>
         <div class="mb-4">
-          <select v-model="selectedChild" class="form-select w-auto d-inline-block me-2">
+          <select v-model="selectedChild" class="form-select w-auto d-inline-block me-2" @change="fetchClasses">
             <option value="" disabled>Выберите ребенка</option>
             <option v-for="child in children" :key="child.id" :value="child.id">{{ child.name }}</option>
           </select>
@@ -235,11 +237,17 @@
       <div v-if="activeTab === 'schedule'">
         <h2 class="mb-4">Расписание</h2>
         <div class="mb-4">
-          <select v-model="selectedChildForSchedule" class="form-select w-auto d-inline-block" @change="fetchSchedule">
+          <select v-model="selectedChildForSchedule" class="form-select w-auto d-inline-block me-2" @change="fetchSchedule">
             <option value="" disabled>Выберите ребенка</option>
+            <option value="all">Все дети</option>
             <option v-for="child in children" :key="child.id" :value="child.id">{{ child.name }}</option>
           </select>
+          <button @click="togglePastClasses" class="btn btn-dark-green btn-sm">
+            {{ showPastClasses ? 'Скрыть прошедшие' : 'Показать прошедшие' }}
+          </button>
         </div>
+        <!-- Будущие занятия -->
+        <h3>Будущие занятия</h3>
         <table class="table table-striped shadow-lg">
           <thead class="table-success">
             <tr>
@@ -253,7 +261,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="scheduleItem in schedule" :key="scheduleItem.id">
+            <tr v-for="scheduleItem in futureSchedule" :key="scheduleItem.id">
               <td>{{ scheduleItem.subject }}</td>
               <td>
                 <span :class="scheduleItem.class_type === 'individual' ? 'badge bg-primary' : 'badge bg-success'">
@@ -278,14 +286,52 @@
                 </button>
               </td>
             </tr>
-            <tr v-if="!schedule.length && selectedChildForSchedule">
-              <td colspan="7" class="text-center">Ребёнок не записан на занятия</td>
+            <tr v-if="!futureSchedule.length && selectedChildForSchedule">
+              <td colspan="7" class="text-center">Ребёнок не записан на будущие занятия</td>
             </tr>
-            <tr v-if="!schedule.length && !selectedChildForSchedule">
+            <tr v-if="!futureSchedule.length && !selectedChildForSchedule">
               <td colspan="7" class="text-center">Выберите ребёнка для просмотра расписания</td>
             </tr>
           </tbody>
         </table>
+        <!-- Прошедшие занятия -->
+        <div v-if="showPastClasses">
+          <h3 class="mt-4">Прошедшие занятия</h3>
+          <table class="table table-striped shadow-lg">
+            <thead class="table-success">
+              <tr>
+                <th>Занятие</th>
+                <th>Тип</th>
+                <th>Возрастная группа</th>
+                <th>Время</th>
+                <th>Кабинет</th>
+                <th>Стоимость</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="scheduleItem in pastSchedule" :key="scheduleItem.id">
+                <td>{{ scheduleItem.subject }}</td>
+                <td>
+                  <span :class="scheduleItem.class_type === 'individual' ? 'badge bg-primary' : 'badge bg-success'">
+                    {{ scheduleItem.class_type === 'individual' ? 'Индивидуальное' : 'Групповое' }}
+                  </span>
+                </td>
+                <td>
+                  <span v-if="scheduleItem.class_type === 'group'">
+                    {{ scheduleItem.min_age }}-{{ scheduleItem.max_age }} лет
+                  </span>
+                  <span v-else>3-16 лет</span>
+                </td>
+                <td>{{ formatDateTime(scheduleItem.schedule) }}</td>
+                <td>{{ scheduleItem.room || 'Не указан' }}</td>
+                <td>{{ scheduleItem.price }} руб.</td>
+              </tr>
+              <tr v-if="!pastSchedule.length && selectedChildForSchedule">
+                <td colspan="6" class="text-center">Нет прошедших занятий</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -306,9 +352,9 @@ export default {
       selectedChild: '',
       selectedSubject: '',
       schedule: [],
-      selectedChildForProfile: '',
       selectedChildForSchedule: '',
       reviews: [],
+      teachers: [], // New data for teachers
       newReview: '',
       parentProfile: {
         username: '',
@@ -326,13 +372,16 @@ export default {
       showEditChildForm: false,
       newChild: { name: '', birth_date: '' },
       editChildData: { id: '', name: '', birth_date: '' },
-      profileAnimation: 'animate__fadeIn',
       phoneError: null,
+      showPastClasses: false, // Toggle for past classes
     };
   },
   computed: {
-    selectedChildData() {
-      return this.children.find(child => child.id === parseInt(this.selectedChildForProfile)) || {};
+    futureSchedule() {
+      return this.schedule.filter(item => new Date(item.schedule) > new Date());
+    },
+    pastSchedule() {
+      return this.schedule.filter(item => new Date(item.schedule) <= new Date());
     },
   },
   methods: {
@@ -346,11 +395,21 @@ export default {
         this.handleError(error, 'Ошибка при загрузке профиля');
       }
     },
+    async fetchTeachers() {
+      try {
+        const response = await axios.get('http://localhost:3000/api/users/teachers/public');
+        this.teachers = response.data;
+      } catch (error) {
+        this.handleError(error, 'Ошибка при загрузке данных учителей');
+      }
+    },
     async fetchClasses() {
       const headers = this.getAuthHeaders();
       if (!headers) return;
       try {
-        const params = this.selectedSubject ? { subject_id: this.selectedSubject } : {};
+        const params = {};
+        if (this.selectedSubject) params.subject_id = this.selectedSubject;
+        if (this.selectedChild) params.child_id = this.selectedChild; // Filter by child age
         const response = await axios.get('http://localhost:3000/api/classes/public', { headers, params });
         this.classes = response.data;
       } catch (error) {
@@ -383,7 +442,8 @@ export default {
       const headers = this.getAuthHeaders();
       if (!headers) return;
       try {
-        const response = await axios.get(`http://localhost:3000/api/parent/schedule/${this.selectedChildForSchedule}`, { headers });
+        const params = this.showPastClasses ? { includePast: true } : {};
+        const response = await axios.get(`http://localhost:3000/api/parent/schedule/${this.selectedChildForSchedule}`, { headers, params });
         this.schedule = response.data;
       } catch (error) {
         this.handleError(error, 'Ошибка при получении расписания');
@@ -426,7 +486,7 @@ export default {
       const headers = this.getAuthHeaders();
       if (!headers) return;
       try {
-        await axios.put(`http://localhost:3000/api/parent/children/${this.selectedChildForProfile}`, this.editChildData, { headers });
+        await axios.put(`http://localhost:3000/api/parent/children/${this.editChildData.id}`, this.editChildData, { headers });
         this.showToast('Данные ребёнка обновлены!', 'success');
         this.showEditChildForm = false;
         this.fetchChildren();
@@ -494,15 +554,13 @@ export default {
         this.handleError(error, 'Ошибка при обновлении профиля');
       }
     },
-    editChild() {
-      this.editChildData = { ...this.selectedChildData };
+    editChild(child) {
+      this.editChildData = { ...child };
       this.showEditChildForm = true;
     },
-    animateProfile() {
-      this.profileAnimation = 'animate__fadeOut';
-      setTimeout(() => {
-        this.profileAnimation = 'animate__fadeIn';
-      }, 300);
+    togglePastClasses() {
+      this.showPastClasses = !this.showPastClasses;
+      this.fetchSchedule();
     },
     validatePhone() {
       const phonePattern = /^\+\d{10,15}$/;
@@ -568,12 +626,26 @@ export default {
       this.fetchClasses();
       this.fetchSubjects();
       this.fetchReviews();
+      this.fetchTeachers();
     }
   },
 };
 </script>
 
+
 <style scoped>
+.teacher-card {
+  transition: transform 0.3s ease;
+}
+
+.teacher-card:hover {
+  transform: translateY(-5px);
+}
+
+.btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
 .parent-page {
   min-height: 100vh;
   background: linear-gradient(135deg, #d5f7d5, #e8f5e9);

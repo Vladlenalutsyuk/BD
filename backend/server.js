@@ -253,9 +253,9 @@ const startServer = async () => {
     }
   });
 
-  // Публичный эндпоинт для получения занятий
+  // Публичный эндпоинт для получения занятий (с фильтрацией по возрасту ребёнка)
   app.get('/api/classes/public', async (req, res) => {
-    const { subject_id } = req.query;
+    const { subject_id, child_id } = req.query;
     try {
       let query = `
         SELECT classes.id, classes.schedule, classes.price, classes.class_type, classes.min_age, classes.max_age,
@@ -272,6 +272,17 @@ const startServer = async () => {
       if (subject_id) {
         query += ' AND classes.subject_id = ?';
         params.push(subject_id);
+      }
+      if (child_id) {
+        query += ` AND (
+          classes.class_type = 'individual' OR
+          EXISTS (
+            SELECT 1 FROM children
+            WHERE children.id = ? AND
+            FLOOR(DATEDIFF(CURDATE(), children.birth_date) / 365.25) BETWEEN classes.min_age AND classes.max_age
+          )
+        )`;
+        params.push(child_id);
       }
       const [results] = await db.promise().query(query, params);
       res.json(results);
@@ -828,24 +839,42 @@ const startServer = async () => {
     }
   });
 
-  // Получение расписания ребёнка
+  // Получение расписания ребёнка (с поддержкой всех детей и прошедших занятий)
   app.get('/api/parent/schedule/:childId', authenticateToken, async (req, res) => {
     if (req.user.role !== 'parent') {
       return res.status(403).json({ error: 'Доступ запрещён' });
     }
     const { childId } = req.params;
+    const { includePast } = req.query; // New query param to include past classes
     try {
       const [parent] = await db.promise().query('SELECT id FROM parents WHERE user_id = ?', [req.user.id]);
       if (parent.length === 0) return res.status(404).json({ error: 'Родитель не найден' });
-      const [results] = await db.promise().query(`
+
+      let query = `
         SELECT classes.id, classes.schedule, classes.price, classes.class_type, classes.min_age, classes.max_age,
                subjects.name AS subject, rooms.name AS room
         FROM enrollments
         JOIN classes ON enrollments.class_id = classes.id
         JOIN subjects ON classes.subject_id = subjects.id
         LEFT JOIN rooms ON classes.room_id = rooms.id
-        WHERE enrollments.child_id = ? AND classes.schedule > NOW()
-      `, [childId]);
+      `;
+      const params = [];
+
+      if (childId === 'all') {
+        query += ' WHERE enrollments.child_id IN (SELECT id FROM children WHERE parent_id = ?)';
+        params.push(parent[0].id);
+      } else {
+        query += ' WHERE enrollments.child_id = ?';
+        params.push(childId);
+      }
+
+      if (!includePast) {
+        query += ' AND classes.schedule > NOW()';
+      }
+
+      query += ' ORDER BY classes.schedule DESC';
+
+      const [results] = await db.promise().query(query, params);
       res.json(results);
     } catch (err) {
       console.error('Ошибка при получении расписания:', err.message);
