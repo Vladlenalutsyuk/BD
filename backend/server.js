@@ -146,6 +146,88 @@ const initializeDatabase = async () => {
       )
     `);
 
+    // Create stored procedure for enrolling a child
+    await db.query(`
+      DROP PROCEDURE IF EXISTS EnrollChild;
+    `);
+    await db.query(`
+      CREATE PROCEDURE EnrollChild(
+        IN p_class_id INT,
+        IN p_child_id INT,
+        OUT p_message VARCHAR(255)
+      )
+      BEGIN
+        DECLARE child_age INT;
+        DECLARE min_age INT;
+        DECLARE max_age INT;
+        DECLARE class_type ENUM('group', 'individual');
+        DECLARE enrollment_count INT;
+
+        -- Проверка возраста ребёнка
+        SELECT FLOOR(DATEDIFF(CURDATE(), birth_date) / 365.25)
+        INTO child_age
+        FROM children
+        WHERE id = p_child_id;
+
+        SELECT min_age, max_age, class_type
+        INTO min_age, max_age, class_type
+        FROM classes
+        WHERE id = p_class_id;
+
+        IF child_age IS NULL THEN
+          SET p_message = 'Ребёнок не найден';
+          SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = p_message;
+        END IF;
+
+        IF min_age IS NULL THEN
+          SET p_message = 'Занятие не найдено';
+          SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = p_message;
+        END IF;
+
+        IF child_age < min_age OR child_age > max_age THEN
+          SET p_message = 'Ребёнок не соответствует возрастным ограничениям';
+          SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = p_message;
+        END IF;
+
+        -- Проверка на индивидуальное занятие
+        IF class_type = 'individual' THEN
+          SELECT COUNT(*) INTO enrollment_count
+          FROM enrollments
+          WHERE class_id = p_class_id;
+          IF enrollment_count > 0 THEN
+            SET p_message = 'Индивидуальное занятие уже занято';
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = p_message;
+          END IF;
+        END IF;
+
+        -- Проверка на существующую запись
+        IF EXISTS (SELECT 1 FROM enrollments WHERE class_id = p_class_id AND child_id = p_child_id) THEN
+          SET p_message = 'Ребёнок уже записан на это занятие';
+          SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = p_message;
+        END IF;
+
+        -- Вставка записи
+        INSERT INTO enrollments (class_id, child_id)
+        VALUES (p_class_id, p_child_id);
+
+        SET p_message = 'Ребёнок успешно записан на занятие';
+      END
+    `);
+
+    // Create trigger for archiving teachers
+    await db.query(`
+      DROP TRIGGER IF EXISTS archive_teacher;
+    `);
+    await db.query(`
+      CREATE TRIGGER archive_teacher
+      BEFORE DELETE ON teachers
+      FOR EACH ROW
+      BEGIN
+        INSERT INTO deleted_teachers (user_id, subject_id, phone, education, experience, deleted_at)
+        VALUES (OLD.user_id, OLD.subject_id, OLD.phone, OLD.education, OLD.experience, NOW());
+      END
+    `);
+
     // Insert default admin if not exists
     const [admin] = await db.query('SELECT * FROM users WHERE role = "admin"');
     if (admin.length === 0) {
@@ -650,52 +732,20 @@ app.post('/api/enrollments', authenticateToken, adminOnly, async (req, res) => {
     return res.status(400).json({ error: 'Некорректный ID занятия или ребенка' });
   }
   try {
-    // Check if class exists and get age constraints
-    const [classResult] = await db.query('SELECT min_age, max_age, class_type FROM classes WHERE id = ?', [classId]);
-    if (classResult.length === 0) {
-      return res.status(404).json({ error: 'Занятие не найдено' });
-    }
-    const { min_age, max_age, class_type } = classResult[0];
+    // Вызов хранимой процедуры
+    await db.query('CALL EnrollChild(?, ?, @p_message)', [classId, childId]);
+    const [result] = await db.query('SELECT @p_message AS message');
+    const message = result[0].message;
 
-    // Check if child exists and meets age requirements
-    const [childResult] = await db.query(`
-      SELECT FLOOR(DATEDIFF(CURDATE(), birth_date) / 365.25) AS age
-      FROM children
-      WHERE id = ?
-    `, [childId]);
-    if (childResult.length === 0) {
-      return res.status(404).json({ error: 'Ребенок не найден' });
+    if (message.includes('успешно')) {
+      res.status(201).json({ message });
+    } else {
+      res.status(400).json({ error: message });
     }
-    const childAge = childResult[0].age;
-    if (childAge < min_age || childAge > max_age) {
-      return res.status(400).json({ error: 'Ребенок не соответствует возрастным ограничениям' });
-    }
-
-    // Check for existing enrollment
-    const [existingEnrollment] = await db.query(`
-      SELECT id FROM enrollments WHERE class_id = ? AND child_id = ?
-    `, [classId, childId]);
-    if (existingEnrollment.length > 0) {
-      return res.status(400).json({ error: 'Ребенок уже записан на это занятие' });
-    }
-
-    // Check for individual class capacity
-    if (class_type === 'individual') {
-      const [enrollmentCount] = await db.query(`
-        SELECT COUNT(*) AS count FROM enrollments WHERE class_id = ?
-      `, [classId]);
-      if (enrollmentCount[0].count > 0) {
-        return res.status(400).json({ error: 'Индивидуальное занятие уже занято' });
-      }
-    }
-
-    // Enroll the child
-    await db.query('INSERT INTO enrollments (class_id, child_id) VALUES (?, ?)', [classId, childId]);
-    res.status(201).json({ message: 'Ребенок успешно записан на занятие' });
   } catch (err) {
     console.error('Ошибка записи ребенка на занятие:', err.stack);
-    if (err.code === 'ER_DUP_ENTRY') {
-      res.status(400).json({ error: 'Ребенок уже записан на это занятие' });
+    if (err.sqlMessage) {
+      res.status(400).json({ error: err.sqlMessage });
     } else {
       res.status(500).json({ error: 'Ошибка сервера' });
     }
