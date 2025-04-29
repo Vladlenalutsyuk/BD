@@ -1,10 +1,11 @@
+// main.ts
 import { createApp } from 'vue';
 import App from './App.vue';
 import router from './router';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import * as bootstrap from 'bootstrap'; // Импорт Bootstrap
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
-import Toast from 'vue-toastification';
+import Toast, { POSITION } from 'vue-toastification'; // Adjusted import
 import 'vue-toastification/dist/index.css';
 import 'animate.css';
 
@@ -24,7 +25,7 @@ app.use(Toast, {
   transition: 'Vue-Toastification__bounce',
   maxToasts: 20,
   newestOnTop: true,
-  position: 'top-right',
+  position: POSITION.TOP_RIGHT, // Use the POSITION enum
   timeout: 5000,
   closeOnClick: true,
   pauseOnFocusLoss: true,

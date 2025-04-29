@@ -3,12 +3,7 @@
     <!-- Навигационное меню -->
     <nav v-if="user" class="navbar navbar-expand-lg navbar-light shadow-sm">
       <div class="container-fluid">
-        <!-- Навигационные ссылки слева -->
-        <div class="navbar-nav me-auto">
-          <router-link v-if="user?.role === 'parent'" class="nav-link" to="/parent">Родитель</router-link>
-          <router-link v-if="user?.role === 'teacher'" class="nav-link" to="/teacher">Учитель</router-link>
-          <router-link v-if="user?.role === 'admin'" class="nav-link" to="/admin">Администратор</router-link>
-        </div>
+        
 
         <!-- Центрированный заголовок и роль -->
         <div class="navbar-brand text-center">
@@ -246,6 +241,7 @@ export default {
   .role {
     font-size: 0.9rem;
   }
+  
 
   .welcome-text {
     font-size: 1rem;
@@ -254,5 +250,6 @@ export default {
   .nav-link {
     font-size: 0.9rem;
   }
+  
 }
 </style>
