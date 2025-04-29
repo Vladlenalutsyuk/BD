@@ -16,7 +16,7 @@ app.use(express.json());
 const db = mysql.createPool({
   host: 'localhost',
   user: 'root',
-  password: 'vladlena121512', // Замените на ваш пароль MySQL
+  password: 'vladlena121512', // Ваш пароль MySQL
   database: 'children_center',
   waitForConnections: true,
   connectionLimit: 10,
@@ -135,6 +135,17 @@ const initializeDatabase = async () => {
       )
     `);
 
+    // Reviews table
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS reviews (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        parent_id INT NOT NULL,
+        content TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (parent_id) REFERENCES parents(id) ON DELETE CASCADE
+      )
+    `);
+
     // Insert default admin if not exists
     const [admin] = await db.query('SELECT * FROM users WHERE role = "admin"');
     if (admin.length === 0) {
@@ -143,6 +154,57 @@ const initializeDatabase = async () => {
         INSERT INTO users (username, email, password, role)
         VALUES ('admin', 'admin@example.com', ?, 'admin')
       `, [hashedPassword]);
+    }
+
+    // Insert sample parent user and parent record if not exists
+    const [parents] = await db.query('SELECT * FROM users WHERE role = "parent"');
+    let parentId = 1; // Default parent_id for reviews
+    if (parents.length === 0) {
+      const hashedPassword = await bcrypt.hash('parent123', 10);
+      await db.query(`
+        INSERT INTO users (username, email, password, role)
+        VALUES ('parent1', 'parent1@example.com', ?, 'parent')
+      `, [hashedPassword]);
+
+      const [userResult] = await db.query('SELECT id FROM users WHERE username = "parent1"');
+      const userId = userResult[0].id;
+
+      await db.query(`
+        INSERT INTO parents (user_id, phone)
+        VALUES (?, '1234567890')
+      `, [userId]);
+
+      const [parentResult] = await db.query('SELECT id FROM parents WHERE user_id = ?', [userId]);
+      parentId = parentResult[0].id;
+    } else {
+      const [parentResult] = await db.query('SELECT id FROM parents WHERE user_id = ?', [parents[0].id]);
+      parentId = parentResult[0]?.id || 1; // Fallback to 1 if parent not found
+    }
+
+    // Insert sample data for testing (optional, remove in production)
+    const [subjects] = await db.query('SELECT * FROM subjects');
+    if (subjects.length === 0) {
+      await db.query(`
+        INSERT INTO subjects (name) VALUES
+        ('Математика'), ('Рисование'), ('Музыка')
+      `);
+    }
+
+    const [rooms] = await db.query('SELECT * FROM rooms');
+    if (rooms.length === 0) {
+      await db.query(`
+        INSERT INTO rooms (name) VALUES
+        ('Кабинет 101'), ('Кабинет 102')
+      `);
+    }
+
+    const [reviews] = await db.query('SELECT * FROM reviews');
+    if (reviews.length === 0) {
+      await db.query(`
+        INSERT INTO reviews (parent_id, content, created_at) VALUES
+        (?, 'Отличный центр, ребёнок в восторге!', NOW()),
+        (?, 'Учителя очень внимательные, рекомендую!', NOW())
+      `, [parentId, parentId]);
     }
   } catch (err) {
     console.error('Ошибка инициализации базы данных:', err.stack);
@@ -183,6 +245,85 @@ initializeDatabase();
 // Validate token
 app.get('/api/auth/validate', authenticateToken, (req, res) => {
   res.json({ valid: true, role: req.user.role });
+});
+
+// Public endpoint: Get all subjects (no authentication required)
+app.get('/api/subjects/public', async (req, res) => {
+  try {
+    const [results] = await db.query('SELECT * FROM subjects');
+    res.json(results);
+  } catch (err) {
+    console.error('Ошибка получения предметов:', err.stack);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Authenticated endpoint: Get all subjects
+app.get('/api/subjects', authenticateToken, async (req, res) => {
+  try {
+    const [results] = await db.query('SELECT * FROM subjects');
+    res.json(results);
+  } catch (err) {
+    console.error('Ошибка получения предметов:', err.stack);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Public endpoint: Get public classes (no authentication required)
+app.get('/api/classes/public', async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT c.id, s.name AS subject, u.username AS teacher_name, c.schedule, r.name AS room,
+             c.price, c.class_type, c.min_age, c.max_age, c.completed, c.subject_id, c.teacher_id, c.room_id,
+             (SELECT COUNT(*) FROM enrollments e WHERE e.class_id = c.id) AS enrolled_count
+      FROM classes c
+      JOIN subjects s ON c.subject_id = s.id
+      LEFT JOIN teachers t ON c.teacher_id = t.id
+      LEFT JOIN users u ON t.user_id = u.id
+      LEFT JOIN rooms r ON c.room_id = r.id
+      WHERE c.completed = FALSE AND c.schedule >= NOW()
+    `);
+    res.json(results);
+  } catch (err) {
+    console.error('Ошибка получения публичных занятий:', err.stack);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Public endpoint: Get public teachers (no authentication required)
+app.get('/api/users/teachers/public', async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT u.id AS user_id, t.id, u.username, s.name AS subject, t.education, t.experience
+      FROM users u
+      JOIN teachers t ON u.id = t.user_id
+      LEFT JOIN subjects s ON t.subject_id = s.id
+      WHERE u.role = 'teacher'
+    `);
+    res.json(results);
+  } catch (err) {
+    console.error('Ошибка получения публичных учителей:', err.stack);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Public endpoint: Get reviews (no authentication required)
+app.get('/api/reviews', async (req, res) => {
+  try {
+    const [results] = await db.query(`
+      SELECT r.id, r.content, r.created_at, u.username AS parent_name
+      FROM reviews r
+      LEFT JOIN parents p ON r.parent_id = p.id
+      LEFT JOIN users u ON p.user_id = u.id
+    `);
+    res.json(results.map(review => ({
+      ...review,
+      parent_name: review.parent_name || 'Аноним'
+    })));
+  } catch (err) {
+    console.error('Ошибка получения отзывов:', err.stack);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
 });
 
 // Register new teacher (admin only)
@@ -282,17 +423,6 @@ app.get('/api/users/parents-children', authenticateToken, adminOnly, async (req,
     res.json(result);
   } catch (err) {
     console.error('Ошибка получения родителей и детей:', err.stack);
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
-});
-
-// Get all subjects
-app.get('/api/subjects', authenticateToken, async (req, res) => {
-  try {
-    const [results] = await db.query('SELECT * FROM subjects');
-    res.json(results);
-  } catch (err) {
-    console.error('Ошибка получения предметов:', err.stack);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });

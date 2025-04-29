@@ -21,7 +21,7 @@
       <div class="hero-overlay">
         <h1 class="display-4 text-white mb-4 animate__animated animate__fadeInDown">Добро пожаловать в Детский Центр!</h1>
         <p class="lead text-white mb-5 animate__animated animate__fadeInUp">
-          Мы помогаем детям раскрыть их потенциал через творчество, обучение и индивидуальный подход.
+          Мы помогаем детям раскрыть свой потенциал с помощью творчества, обучения и индивидуального подхода.
         </p>
         <router-link to="/register" class="btn btn-dark-green btn-lg animate__animated animate__pulse animate__infinite">
           Присоединяйтесь к нам!
@@ -39,7 +39,7 @@
             <div class="card shadow-lg p-4">
               <h4>Наша миссия</h4>
               <p>
-                Мы стремимся раскрывать таланты каждого ребёнка, помогая им расти уверенными, любознательными и счастливыми. Наши программы разработаны с учётом возрастных особенностей и интересов детей.
+                Наша миссия — раскрывать таланты каждого ребёнка, помогая им расти уверенными, любознательными и счастливыми. Наши программы разработаны с учётом возрастных особенностей и интересов детей.
               </p>
             </div>
           </div>
@@ -47,9 +47,9 @@
             <div class="card shadow-lg p-4">
               <h4>Что мы предлагаем</h4>
               <ul class="list-unstyled">
-                <li>👨‍🏫 Уроки с квалифицированными учителями</li>
+                <li>🏫 Занятия с квалифицированными преподавателями</li>
                 <li>🎨 Творческие мастер-классы</li>
-                <li>🤝 Индивидуальный подход к каждому ребёнку</li>
+                <li>👪 Индивидуальный подход к каждому ребёнку</li>
                 <li>📱 Удобная система онлайн-записи и обратной связи</li>
               </ul>
             </div>
@@ -59,7 +59,7 @@
 
       <!-- Информация об учителях -->
       <section class="teachers-section container py-5">
-        <h3 class="text-center mb-4 text-success">Наши учителя</h3>
+        <h3 class="text-center mb-4 text-success">Наши преподаватели</h3>
         <div class="row">
           <div v-for="teacher in teachers" :key="teacher.id" class="col-md-4 mb-4 animate__animated animate__zoomIn">
             <div class="card shadow-lg p-4 text-center">
@@ -78,12 +78,15 @@
       <!-- Карусель отзывов -->
       <section class="reviews-section container py-5">
         <h3 class="text-center mb-4 text-success">Отзывы родителей</h3>
-        <div id="reviewsCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="5000">
+        <div v-if="loadingReviews" class="text-center">
+          <p>Загрузка отзывов...</p>
+        </div>
+        <div v-else id="reviewsCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="5000">
           <div class="carousel-inner">
             <div v-for="(review, index) in reviews" :key="review.id" class="carousel-item" :class="{ active: index === 0 }">
-              <div class="card shadow-sm p-4 text typhoon-center animate__animated animate__fadeIn">
+              <div class="card shadow-sm p-4 text-center">
                 <p class="review-text">"{{ review.content }}"</p>
-                <p class="review-author">— {{ review.parent_name }}, {{ formatDate(review.created_at) }}</p>
+                <p class="review-author">— {{ review.parent_name || 'Аноним' }}, {{ formatDate(review.created_at) }}</p>
               </div>
             </div>
             <div v-if="!reviews.length" class="carousel-item active">
@@ -107,56 +110,7 @@
       </section>
 
       <!-- Ближайшие занятия -->
-      <section class="upcoming-classes container py-5">
-        <h3 class="text-center mb-4 text-success">Ближайшие занятия</h3>
-        <div class="mb-4 d-flex justify-content-center">
-          <div>
-            <label class="me-2">Фильтр по предмету:</label>
-            <select v-model="selectedSubject" @change="fetchClasses" class="form-select d-inline-block w-auto">
-              <option value="">Все предметы</option>
-              <option v-for="subject in uniqueSubjects" :key="subject.id" :value="subject.id">
-                {{ subject.name }}
-              </option>
-            </select>
-          </div>
-        </div>
-        <table class="table table-striped shadow-lg">
-          <thead class="table-success">
-            <tr>
-              <th>Предмет</th>
-              <th>Тип занятия</th>
-              <th>Возрастная группа</th>
-              <th>Дата и время</th>
-              <th>Учитель</th>
-              <th>Кабинет</th>
-              <th>Цена (₽)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="classItem in filteredClasses" :key="classItem.id" class="animate__animated animate__fadeIn">
-              <td>{{ classItem.subject }}</td>
-              <td>
-                <span :class="classItem.class_type === 'individual' ? 'badge bg-primary' : 'badge bg-success'">
-                  {{ classItem.class_type === 'individual' ? 'Индивидуальное' : 'Групповое' }}
-                </span>
-              </td>
-              <td>
-                <span v-if="classItem.class_type === 'group'">
-                  {{ classItem.min_age }}-{{ classItem.max_age }} лет
-                </span>
-                <span v-else>-</span>
-              </td>
-              <td>{{ formatDate(classItem.schedule) }}</td>
-              <td>{{ classItem.teacher_name || 'Не указан' }}</td>
-              <td>{{ classItem.room || 'Не указан' }}</td>
-              <td>{{ classItem.price || '0.00' }}</td>
-            </tr>
-            <tr v-if="!filteredClasses.length">
-              <td colspan="7" class="text-center">Нет ближайших занятий</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
+      
     </div>
 
     <!-- Футер -->
@@ -179,6 +133,7 @@ export default {
       reviews: [],
       teachers: [],
       error: null,
+      loadingReviews: false,
     };
   },
   computed: {
@@ -199,7 +154,7 @@ export default {
   methods: {
     async fetchSubjects() {
       try {
-        const response = await axios.get('http://localhost:3000/api/subjects');
+        const response = await axios.get('http://localhost:3000/api/subjects/public');
         this.subjects = response.data;
       } catch (error) {
         console.error('Ошибка при загрузке предметов:', error);
@@ -216,12 +171,16 @@ export default {
       }
     },
     async fetchReviews() {
+      this.loadingReviews = true;
       try {
         const response = await axios.get('http://localhost:3000/api/reviews');
+        console.log('Reviews response:', response.data);
         this.reviews = response.data;
       } catch (error) {
         console.error('Ошибка при загрузке отзывов:', error);
         this.error = 'Не удалось загрузить отзывы';
+      } finally {
+        this.loadingReviews = false;
       }
     },
     async fetchTeachers() {
@@ -293,7 +252,53 @@ export default {
   padding: 0;
 }
 
-.info-section .card,
+.alert-danger {
+  font-size: 1.8rem; /* Увеличен размер шрифта для сообщения об ошибке */
+  padding: 20px;
+}
+
+/* Увеличение размера шрифта для заголовков секций */
+.info-section h3,
+.teachers-section h3,
+.reviews-section h3 {
+  font-size: 2.5rem; /* Увеличен размер шрифта для заголовков */
+  font-weight: bold;
+}
+
+/* Стили для секции "О нашем центре" */
+.info-section .card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 3px solid #2e7d32; /* Увеличена толщина рамки */
+  border-radius: 15px;
+  background-color: #fff;
+  padding: 20px; /* Увеличен внутренний отступ для контента */
+}
+
+.info-section .card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+}
+
+.info-section .card h4 {
+  font-size: 2rem; /* Увеличен размер шрифта для подзаголовков */
+  margin-bottom: 15px;
+}
+
+.info-section .card p {
+  font-size: 1.6rem; /* Увеличен размер шрифта для текста "Наша миссия" */
+  line-height: 1.5;
+}
+
+.info-section .card ul {
+  font-size: 1.6rem; /* Увеличен размер шрифта для списка "Что мы предлагаем" */
+  line-height: 2;
+}
+
+.info-section .card ul li {
+  margin-bottom: 10px;
+}
+
+/* Стили для других секций */
 .teachers-section .card,
 .reviews-section .card {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -302,7 +307,6 @@ export default {
   background-color: #fff;
 }
 
-.info-section .card:hover,
 .teachers-section .card:hover,
 .reviews-section .card:hover {
   transform: translateY(-10px);
