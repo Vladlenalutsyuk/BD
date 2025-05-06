@@ -1040,10 +1040,10 @@ app.get('/api/statistics/teachers', authenticateToken, adminOnly, async (req, re
         t.id AS teacher_id,
         u.username AS teacher_name,
         s.name AS subject_name,
-        COUNT(DISTINCT cl.id) AS class_count,
-        COALESCE(SUM(e.enrolled_count), 0) AS total_students,
-        COALESCE(SUM(cl.price * e.enrolled_count), 0) AS total_revenue,
-        COALESCE(SUM(cl.price * e.enrolled_count * 0.4), 0) AS teacher_salary
+        COUNT(DISTINCT CASE WHEN cl.completed = TRUE THEN cl.id ELSE NULL END) AS class_count,
+        COALESCE(SUM(CASE WHEN cl.completed = TRUE THEN e.enrolled_count ELSE 0 END), 0) AS total_students,
+        COALESCE(SUM(CASE WHEN cl.completed = TRUE THEN cl.price * e.enrolled_count ELSE 0 END), 0) AS total_revenue,
+        COALESCE(SUM(CASE WHEN cl.completed = TRUE THEN cl.price * e.enrolled_count * 0.4 ELSE 0 END), 0) AS teacher_salary
       FROM teachers t
       JOIN users u ON t.user_id = u.id
       LEFT JOIN subjects s ON t.subject_id = s.id
@@ -1053,13 +1053,11 @@ app.get('/api/statistics/teachers', authenticateToken, adminOnly, async (req, re
         FROM enrollments
         GROUP BY class_id
       ) e ON cl.id = e.class_id
-      WHERE cl.completed = TRUE OR cl.id IS NULL
     `;
     const params = [];
     if (month && /^\d{4}-\d{2}$/.test(month)) {
-      query += ' AND DATE_FORMAT(cl.schedule, "%Y-%m") = ?';
+      query += ' WHERE (cl.completed = TRUE AND DATE_FORMAT(cl.schedule, "%Y-%m") = ?) OR cl.id IS NULL';
       params.push(month);
-      console.log(`Fetching statistics for month: ${month}`);
     }
     query += ' GROUP BY t.id, u.username, s.name ORDER BY total_revenue DESC';
     const [statistics] = await db.query(query, params);
@@ -1277,6 +1275,70 @@ app.get('/api/users/teachers/public', async (req, res) => {
     res.json(teachers);
   } catch (err) {
     res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Получение списка удалённых учителей
+app.get('/api/deleted_teachers', authenticateToken, adminOnly, async (req, res) => {
+  try {
+    const [deletedTeachers] = await db.query(`
+      SELECT dt.id, dt.user_id, dt.username, dt.email, dt.phone, s.name AS subject_name, dt.education, dt.experience, dt.deleted_at
+      FROM deleted_teachers dt
+      LEFT JOIN subjects s ON dt.subject_id = s.id
+    `);
+    res.json(deletedTeachers);
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Восстановление удалённого учителя
+app.post('/api/teachers/restore/:userId', authenticateToken, adminOnly, async (req, res) => {
+  const { userId } = req.params;
+  try {
+    if (!userId || isNaN(userId)) return res.status(400).json({ error: 'Неверный ID пользователя' });
+
+    const connection = await db.getConnection();
+    try {
+      await connection.beginTransaction();
+
+      // Получаем данные удалённого учителя
+      const [deletedTeacher] = await connection.query(`
+        SELECT * FROM deleted_teachers WHERE user_id = ?
+      `, [userId]);
+
+      if (deletedTeacher.length === 0) {
+        await connection.rollback();
+        return res.status(404).json({ error: 'Удалённый учитель не найден' });
+      }
+
+      const teacher = deletedTeacher[0];
+
+      // Восстанавливаем пользователя в таблице users
+      await connection.query(`
+        INSERT INTO users (id, username, email, password, role)
+        VALUES (?, ?, ?, ?, 'teacher')
+      `, [teacher.user_id, teacher.username, teacher.email, 'RESTORED_PASSWORD', teacher.role]);
+
+      // Восстанавливаем учителя в таблице teachers
+      await connection.query(`
+        INSERT INTO teachers (user_id, subject_id, phone, education, experience)
+        VALUES (?, ?, ?, ?, ?)
+      `, [teacher.user_id, teacher.subject_id || null, teacher.phone || null, teacher.education || null, teacher.experience || null]);
+
+      // Удаляем запись из deleted_teachers
+      await connection.query('DELETE FROM deleted_teachers WHERE user_id = ?', [userId]);
+
+      await connection.commit();
+      res.json({ message: 'Учитель успешно восстановлен' });
+    } catch (err) {
+      await connection.rollback();
+      throw err;
+    } finally {
+      connection.release();
+    }
+  } catch (err) {
+    res.status(err.sqlMessage ? 400 : 500).json({ error: err.sqlMessage || 'Ошибка восстановления учителя' });
   }
 });
 

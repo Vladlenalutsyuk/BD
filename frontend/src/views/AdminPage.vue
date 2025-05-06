@@ -64,39 +64,101 @@
 
       <!-- Manage Teachers Tab -->
       <div v-else-if="activeTab === 'teachers'">
-        <h2>Управление учителями</h2>
-        <div class="mb-4">
-          <button class="btn btn-dark-green btn-lg" data-bs-toggle="modal" data-bs-target="#addTeacherModal">
-            Добавить учителя
-          </button>
-        </div>
-        <h3>Список учителей</h3>
-        <div class="table-responsive">
-          <table class="table table-striped">
-            <thead class="table-success">
-              <tr>
-                <th>Имя</th>
-                <th>Email</th>
-                <th>Телефон</th>
-                <th>Предмет</th>
-                <th>Действия</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="teacher in teachers" :key="teacher.user_id">
-                <td>{{ teacher.username }}</td>
-                <td>{{ teacher.email }}</td>
-                <td>{{ teacher.phone || 'Не указан' }}</td>
-                <td>{{ teacher.subject_name || 'Не указан' }}</td>
-                <td>
-                  <button class="btn btn-danger btn-sm" @click="deleteTeacher(teacher.user_id)">Удалить</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+  <h2>Управление учителями</h2>
+  <div class="mb-4">
+    <button class="btn btn-dark-green btn-lg" data-bs-toggle="modal" data-bs-target="#addTeacherModal">
+      Добавить учителя
+    </button>
+  </div>
 
+  <!-- Переключение между активными и удалёнными учителями -->
+  <div class="mb-4">
+    <div class="btn-group" role="group">
+      <button
+        type="button"
+        class="btn"
+        :class="teacherView === 'active' ? 'btn-dark-green' : 'btn-outline-dark-green'"
+        @click="teacherView = 'active'"
+      >
+        Активные учителя
+      </button>
+      <button
+        type="button"
+        class="btn"
+        :class="teacherView === 'deleted' ? 'btn-dark-green' : 'btn-outline-dark-green'"
+        @click="teacherView = 'deleted'; fetchDeletedTeachers()"
+      >
+        Удалённые учителя
+      </button>
+    </div>
+  </div>
+
+  <!-- Список активных учителей -->
+  <div v-if="teacherView === 'active'">
+    <h3>Список учителей</h3>
+    <div class="table-responsive">
+      <table class="table table-striped">
+        <thead class="table-success">
+          <tr>
+            <th>Имя</th>
+            <th>Email</th>
+            <th>Телефон</th>
+            <th>Предмет</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="teacher in teachers" :key="teacher.user_id">
+            <td>{{ teacher.username }}</td>
+            <td>{{ teacher.email }}</td>
+            <td>{{ teacher.phone || 'Не указан' }}</td>
+            <td>{{ teacher.subject_name || 'Не указан' }}</td>
+            <td>
+              <button class="btn btn-danger btn-sm" @click="deleteTeacher(teacher.user_id)">Удалить</button>
+            </td>
+          </tr>
+          <tr v-if="teachers.length === 0">
+            <td colspan="5" class="text-center">Нет активных учителей.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Список удалённых учителей -->
+  <div v-else-if="teacherView === 'deleted'">
+    <h3>Список удалённых учителей</h3>
+    <div class="table-responsive">
+      <table class="table table-striped">
+        <thead class="table-success">
+          <tr>
+            <th>Имя</th>
+            <th>Email</th>
+            <th>Телефон</th>
+            <th>Предмет</th>
+            <th>Дата удаления</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="teacher in deletedTeachers" :key="teacher.user_id">
+            <td>{{ teacher.username }}</td>
+            <td>{{ teacher.email }}</td>
+            <td>{{ teacher.phone || 'Не указан' }}</td>
+            <td>{{ teacher.subject_name || 'Не указан' }}</td>
+            <td>{{ new Date(teacher.deleted_at).toLocaleDateString('ru-RU') }}</td>
+            <td>
+              <button class="btn btn-success btn-sm" @click="restoreTeacher(teacher.user_id)">Восстановить</button>
+            </td>
+          </tr>
+          <tr v-if="deletedTeachers.length === 0">
+            <td colspan="6" class="text-center">Нет удалённых учителей.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
       <!-- Manage Classes Tab -->
       <div v-else-if="activeTab === 'classes'">
         <h2>Управление занятиями</h2>
@@ -580,12 +642,9 @@
 
         <!-- Statistics Tab -->
         <div v-else-if="activeTab === 'statistics'">
-          <h2>Статистика</h2>
-          <div class="mb-4 d-flex align-items-center">
-            <label for="month-filter" class="form-label me-3">Фильтр по месяцу:</label>
-            <input type="month" id="month-filter" v-model="selectedMonth" @change="fetchStatistics" class="form-control w-auto"/>
-          </div>
-          <h3>Статистика по учителям</h3>
+
+          
+          <h2>Статистика по учителям</h2>
           <div class="table-responsive statistics-table">
             <table class="table table-striped table-hover">
   <thead class="table-success">
@@ -831,6 +890,10 @@
     subject_name?: string;
   }
 
+  interface DeletedTeacher extends Teacher {
+  deleted_at: string;
+}
+
   interface ClassItem {
     id: string;
     subject: string;
@@ -928,6 +991,7 @@
     setup() {
       const router = useRouter();
       const toast = useToast();
+      
 
       // Reactive state
       const activeTab = ref<'dashboard' | 'teachers' | 'classes' | 'parents' | 'statistics'>('dashboard');
@@ -982,6 +1046,8 @@
       const enrolledChildren = ref<{ [key: string]: Child[] }>({});
       const eligibleChildren = ref<EligibleChild[]>([]);
       const selectedClassId = ref<string | null>(null);
+      const teacherView = ref<'active' | 'deleted'>('active');
+      const deletedTeachers = ref<DeletedTeacher[]>([]);
 
       // Computed properties
       const filteredParents = computed<Parent[]>(() => {
@@ -1047,43 +1113,47 @@ const handleError = (err, defaultMessage) => {
       };
 
       const fetchData = async () => {
-        try {
-          const token = localStorage.getItem('token');
-          if (!token) {
-            toast.error('Токен отсутствует. Пожалуйста, войдите снова.');
-            logout();
-            return;
-          }
-          const [teachersRes, classesRes, parentsRes, subjectsRes, roomsRes] = await Promise.all([
-            axios.get<Teacher[]>('http://localhost:3000/api/users/teachers', {
-              headers: { Authorization: `Bearer ${token}` },
-            }),
-            axios.get<ClassItem[]>('http://localhost:3000/api/classes', {
-              headers: { Authorization: `Bearer ${token}` },
-            }),
-            axios.get<Parent[]>('http://localhost:3000/api/users/parents-children', {
-              headers: { Authorization: `Bearer ${token}` },
-            }),
-            axios.get<Subject[]>('http://localhost:3000/api/subjects', {
-              headers: { Authorization: `Bearer ${token}` },
-            }),
-            axios.get<Room[]>('http://localhost:3000/api/rooms', {
-              headers: { Authorization: `Bearer ${token}` },
-            }),
-          ]);
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Токен отсутствует. Пожалуйста, войдите снова.');
+      logout();
+      return;
+    }
+    const [teachersRes, classesRes, parentsRes, subjectsRes, roomsRes, deletedTeachersRes] = await Promise.all([
+      axios.get<Teacher[]>('http://localhost:3000/api/users/teachers', {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      axios.get<ClassItem[]>('http://localhost:3000/api/classes', {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      axios.get<Parent[]>('http://localhost:3000/api/users/parents-children', {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      axios.get<Subject[]>('http://localhost:3000/api/subjects', {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      axios.get<Room[]>('http://localhost:3000/api/rooms', {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      axios.get<DeletedTeacher[]>('http://localhost:3000/api/deleted_teachers', {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    ]);
 
-          teachers.value = teachersRes.data;
-          classes.value = classesRes.data;
-          parents.value = parentsRes.data;
-          subjects.value = subjectsRes.data;
-          rooms.value = roomsRes.data;
+    teachers.value = teachersRes.data;
+    classes.value = classesRes.data;
+    parents.value = parentsRes.data;
+    subjects.value = subjectsRes.data;
+    rooms.value = roomsRes.data;
+    deletedTeachers.value = deletedTeachersRes.data;
 
-          filterClasses();
-          await fetchStatistics();
-        } catch (err) {
-          handleError(err, 'Ошибка загрузки данных');
-        }
-      };
+    filterClasses();
+    await fetchStatistics();
+  } catch (err) {
+    handleError(err, 'Ошибка загрузки данных');
+  }
+};
 
       const fetchTeachersBySubject = async () => {
         try {
@@ -1250,6 +1320,7 @@ const handleError = (err, defaultMessage) => {
       };
 
       const fetchStatistics = async () => {
+  console.log('Selected month:', selectedMonth.value);
   try {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -1261,6 +1332,7 @@ const handleError = (err, defaultMessage) => {
       params: { month: selectedMonth.value || undefined },
       headers: { Authorization: `Bearer ${token}`, 'Cache-Control': 'no-cache' },
     });
+    console.log('Statistics response:', response.data);
     statistics.value = response.data || [];
     if (!response.data.length) {
       toast.info('Нет данных за выбранный период.');
@@ -1497,6 +1569,43 @@ const handleError = (err, defaultMessage) => {
         router.push('/login');
       };
 
+      const fetchDeletedTeachers = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Токен отсутствует. Пожалуйста, войдите снова.');
+      logout();
+      return;
+    }
+    const response = await axios.get<DeletedTeacher[]>('http://localhost:3000/api/deleted_teachers', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    deletedTeachers.value = response.data;
+  } catch (err) {
+    handleError(err, 'Ошибка загрузки списка удалённых учителей');
+  }
+};
+
+const restoreTeacher = async (userId: string) => {
+  if (!confirm('Вы уверены, что хотите восстановить этого учителя?')) return;
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Токен отсутствует. Пожалуйста, войдите снова.');
+      logout();
+      return;
+    }
+    await axios.post(`http://localhost:3000/api/teachers/restore/${userId}`, {}, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    toast.success('Учитель успешно восстановлен');
+    await fetchData(); // Обновляем список активных учителей
+    await fetchDeletedTeachers(); // Обновляем список удалённых учителей
+  } catch (err) {
+    handleError(err, 'Ошибка при восстановлении учителя');
+  }
+};
+
       // Lifecycle hook
       onMounted(() => {
         validateToken();
@@ -1559,6 +1668,10 @@ const handleError = (err, defaultMessage) => {
         fetchEligibleChildren,
         enrollChild,
         logout,
+        teacherView,
+        deletedTeachers,
+        fetchDeletedTeachers,
+        restoreTeacher,
       };
     },
   });
