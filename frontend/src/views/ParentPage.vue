@@ -826,28 +826,28 @@ export default {
       }
     },
     async enrollChild(classId) {
-      const headers = this.getAuthHeaders();
-      if (!headers) return;
-      if (!classId || !this.selectedChild) {
-        this.showToast("Выберите занятие и ребёнка", "error");
-        return;
-      }
-      console.log('Attempting to enroll:', { classId, childId: this.selectedChild }); // Debugging log
-      try {
-        this.isLoading = true;
-        await axios.post(
-          "http://localhost:3000/api/enrollments",
-          { child_id: this.selectedChild, class_id: classId },
-          { headers }
-        );
-        this.showToast("Ребёнок записан на занятие!", "success");
-        await Promise.all([this.fetchClasses(), this.fetchSchedule()]);
-      } catch (error) {
-        this.handleError(error, "Ошибка при записи на занятие");
-      } finally {
-        this.isLoading = false;
-      }
-    },
+  const headers = this.getAuthHeaders();
+  if (!headers) return;
+  if (!classId || !this.selectedChild) {
+    this.showToast("Выберите занятие и ребёнка", "error");
+    return;
+  }
+  console.log('Attempting to enroll:', { classId, childId: this.selectedChild }); // Debugging log
+  try {
+    this.isLoading = true;
+    await axios.post(
+      "http://localhost:3000/api/enrollments",
+      { childId: this.selectedChild, classId: classId }, // Updated key names
+      { headers }
+    );
+    this.showToast("Ребёнок записан на занятие!", "success");
+    await Promise.all([this.fetchClasses(), this.fetchSchedule()]);
+  } catch (error) {
+    this.handleError(error, "Ошибка при записи на занятие");
+  } finally {
+    this.isLoading = false;
+  }
+},
     async unenrollChild(classId) {
       const headers = this.getAuthHeaders();
       if (!headers) return;
