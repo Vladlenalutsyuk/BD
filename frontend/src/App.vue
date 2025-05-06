@@ -3,14 +3,11 @@
     <!-- Навигационное меню -->
     <nav v-if="user" class="navbar navbar-expand-lg navbar-light shadow-sm">
       <div class="container-fluid">
-        
-
         <!-- Центрированный заголовок и роль -->
         <div class="navbar-brand text-center">
           <span class="title text-success">Детский развивающий центр</span>
           <div class="role text-muted">{{ getRoleDisplay }}</div>
         </div>
-
         <!-- Кнопка для мобильного меню -->
         <button
           class="navbar-toggler"
@@ -19,11 +16,9 @@
           data-bs-target="#navbarNav"
           aria-controls="navbarNav"
           aria-expanded="false"
-          aria-label="Toggle navigation"
-        >
+          aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
-
         <!-- Приветствие справа -->
         <div class="collapse navbar-collapse" id="navbarNav">
           <div class="ms-auto d-flex align-items-center">
@@ -32,14 +27,12 @@
         </div>
       </div>
     </nav>
-
     <!-- Основное содержимое -->
     <div class="content">
       <router-view @user-updated="updateUser"></router-view>
     </div>
   </div>
 </template>
-
 <script>
 export default {
   name: 'App',

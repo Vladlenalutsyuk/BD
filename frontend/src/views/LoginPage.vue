@@ -56,11 +56,20 @@ export default {
     };
   },
   methods: {
+
+    async login() {
+  const response = await axios.post('http://localhost:3000/api/login', {
+    email: this.email,
+    password: this.password
+  });
+  localStorage.setItem('token', response.data.token);
+  this.$router.push('/teacher');
+},
+
     async loginUser() {
       console.log('Попытка входа...');
       console.log('Данные формы:', { email: this.email, password: this.password });
 
-      // Валидация
       if (!this.email || !this.password) {
         this.showToast('Пожалуйста, заполните все поля.', 'error');
         return;
@@ -94,7 +103,9 @@ export default {
         localStorage.setItem('token', token);
         console.log('Данные сохранены в localStorage:', { user, token });
 
-        // Перенаправление по роли
+        this.email = '';
+        this.password = '';
+
         if (user.role === 'parent') {
           this.$router.push('/parent');
         } else if (user.role === 'teacher') {
@@ -104,12 +115,12 @@ export default {
         } else {
           this.showToast('Неизвестная роль пользователя.', 'error');
         }
-        this.isLoading = false;
       } catch (error) {
         console.error('Ошибка при входе:', error.response?.data || error.message);
         const errorMessage =
           error.response?.data?.error || 'Ошибка входа. Попробуйте снова.';
         this.showToast(errorMessage, 'error');
+      } finally {
         this.isLoading = false;
       }
     },
@@ -118,7 +129,7 @@ export default {
         this.$toast[type](message, { timeout: 5000 });
       } else {
         console[type === 'error' ? 'error' : 'log'](`Toast (${type}): ${message}`);
-        alert(message); // Fallback на alert, если vue-toastification не настроен
+        alert(message);
       }
     },
   },

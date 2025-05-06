@@ -2,26 +2,26 @@
   <div class="teacher-page d-flex">
     <!-- Sidebar -->
     <aside class="sidebar bg-white shadow-sm">
-      <h3 class="text-center text-success mb-4">Меню</h3>
-      <ul class="nav flex-column">
-        <li class="nav-item">
-          <a class="nav-link" :class="{ active: activeTab === 'profile' }" @click="setActiveTab('profile')"><i class="fas fa-user me-2"></i> Профиль</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" :class="{ active: activeTab === 'salary' }" @click="setActiveTab('salary')"><i class="fas fa-money-bill-wave me-2"></i> Зарплата</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" :class="{ active: activeTab === 'schedule' }" @click="setActiveTab('schedule')"><i class="fas fa-calendar-alt me-2"></i> Расписание</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link text-danger" @click="logout"><i class="fas fa-sign-out-alt me-2"></i> Выйти</a>
-        </li>
-      </ul>
-    </aside>
+  <h3 class="text-center text-success mb-4">Меню</h3>
+  <ul class="nav flex-column">
+    <li class="nav-item">
+      <a class="nav-link" :class="{ active: activeTab === 'profile' }" @click="setActiveTab('profile')"><i class="fas fa-user me-2"></i> Профиль</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" :class="{ active: activeTab === 'salary', disabled: !profile.subject_id }" @click="setActiveTab('salary')"><i class="fas fa-money-bill-wave me-2"></i> Зарплата</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" :class="{ active: activeTab === 'schedule', disabled: !profile.subject_id }" @click="setActiveTab('schedule')"><i class="fas fa-calendar-alt me-2"></i> Расписание</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link text-danger" @click="logout"><i class="fas fa-sign-out-alt me-2"></i> Выйти</a>
+    </li>
+  </ul>
+</aside>
 
     <!-- Main content -->
     <main class="main-content p-4 flex-grow-1">
-      
+
 
       <!-- Profile Tab -->
       <section v-if="activeTab === 'profile'">
@@ -36,7 +36,8 @@
             <li class="list-group-item"><strong>Опыт:</strong> {{ profile.experience ? profile.experience + ' лет' : 'Не указано' }}</li>
             <li class="list-group-item"><strong>Предмет:</strong> {{ profile.subject_name || 'Не указано' }}</li>
           </ul>
-          <button class="btn btn-success mt-3" @click="openEditModal"><i class="fas fa-edit me-2"></i> Редактировать</button>
+          <button class="btn btn-success mt-3" @click="openEditModal"><i class="fas fa-edit me-2"></i>
+            Редактировать</button>
         </div>
       </section>
 
@@ -70,7 +71,8 @@
             </table>
           </div>
           <div v-else class="text-center text-muted p-4">
-            <i class="fas fa-info-circle me-2"></i> Нет данных о зарплате. Возможно, занятия не отмечены как завершенные.
+            <i class="fas fa-info-circle me-2"></i> Нет данных о зарплате. Возможно, занятия не отмечены как
+            завершенные.
           </div>
         </div>
       </section>
@@ -116,10 +118,13 @@
           <h3>Предстоящие занятия</h3>
           <div class="mb-3 d-flex justify-content-between align-items-center">
             <div>
-              <button class="btn btn-success me-2" :class="{ active: scheduleView === 'list' }" @click="setScheduleView('list')">Общее</button>
-              <button class="btn btn-success" :class="{ active: scheduleView === 'weekly' }" @click="setScheduleView('weekly')">Неделя</button>
+              <button class="btn btn-success me-2" :class="{ active: scheduleView === 'list' }"
+                @click="setScheduleView('list')">Общее</button>
+              <button class="btn btn-success" :class="{ active: scheduleView === 'weekly' }"
+                @click="setScheduleView('weekly')">Неделя</button>
             </div>
-            <input v-if="scheduleView === 'weekly'" type="date" v-model="weekStart" @change="fetchWeeklySchedule('upcoming')" class="form-control w-auto" />
+            <input v-if="scheduleView === 'weekly'" type="date" v-model="weekStart"
+              @change="fetchWeeklySchedule('upcoming')" class="form-control w-auto" />
           </div>
 
           <!-- List View (Upcoming) -->
@@ -190,10 +195,13 @@
           <h3>Завершенные занятия</h3>
           <div class="mb-3 d-flex justify-content-between align-items-center">
             <div>
-              <button class="btn btn-success me-2" :class="{ active: scheduleView === 'list' }" @click="setScheduleView('list')">Общее</button>
-              <button class="btn btn-success" :class="{ active: scheduleView === 'weekly' }" @click="setScheduleView('weekly')">Неделя</button>
+              <button class="btn btn-success me-2" :class="{ active: scheduleView === 'list' }"
+                @click="setScheduleView('list')">Общее</button>
+              <button class="btn btn-success" :class="{ active: scheduleView === 'weekly' }"
+                @click="setScheduleView('weekly')">Неделя</button>
             </div>
-            <input v-if="scheduleView === 'weekly'" type="date" v-model="weekStart" @change="fetchWeeklySchedule('completed')" class="form-control w-auto" />
+            <input v-if="scheduleView === 'weekly'" type="date" v-model="weekStart"
+              @change="fetchWeeklySchedule('completed')" class="form-control w-auto" />
           </div>
 
           <!-- List View (Completed) -->
@@ -261,7 +269,8 @@
       </section>
 
       <!-- Profile Completion Modal -->
-      <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+      <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true"
+        data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog">
           <div class="modal-content">
             <div class="modal-header bg-success text-white">
@@ -271,7 +280,8 @@
               <form @submit.prevent="submitProfile">
                 <div class="mb-3">
                   <label for="phone" class="form-label">Телефон</label>
-                  <input v-model="form.phone" type="text" id="phone" class="form-control" required @input="validatePhone" />
+                  <input v-model="form.phone" type="text" id="phone" class="form-control" required
+                    @input="validatePhone" />
                   <small v-if="phoneError" class="text-danger">{{ phoneError }}</small>
                 </div>
                 <div class="mb-3">
@@ -280,7 +290,8 @@
                 </div>
                 <div class="mb-3">
                   <label for="experience" class="form-label">Опыт (лет)</label>
-                  <input v-model.number="form.experience" type="number" id="experience" class="form-control" required min="0" />
+                  <input v-model.number="form.experience" type="number" id="experience" class="form-control" required
+                    min="0" />
                 </div>
                 <div class="mb-3">
                   <label for="subject_id" class="form-label">Предмет</label>
@@ -299,7 +310,8 @@
       </div>
 
       <!-- Edit Profile Modal -->
-      <div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+      <div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog">
           <div class="modal-content">
             <div class="modal-header bg-success text-white">
@@ -310,7 +322,8 @@
               <form @submit.prevent="updateProfile">
                 <div class="mb-3">
                   <label for="edit-phone" class="form-label">Телефон</label>
-                  <input v-model="form.phone" type="text" id="edit-phone" class="form-control" required @input="validatePhone" />
+                  <input v-model="form.phone" type="text" id="edit-phone" class="form-control" required
+                    @input="validatePhone" />
                   <small v-if="phoneError" class="text-danger">{{ phoneError }}</small>
                 </div>
                 <div class="mb-3">
@@ -319,7 +332,8 @@
                 </div>
                 <div class="mb-3">
                   <label for="edit-experience" class="form-label">Опыт (лет)</label>
-                  <input v-model.number="form.experience" type="number" id="edit-experience" class="form-control" required min="0" />
+                  <input v-model.number="form.experience" type="number" id="edit-experience" class="form-control"
+                    required min="0" />
                 </div>
                 <div class="mb-3">
                   <label for="edit-subject_id" class="form-label">Предмет</label>
@@ -338,7 +352,8 @@
       </div>
 
       <!-- Enrolled Students Modal -->
-      <div class="modal fade" id="enrolledStudentsModal" tabindex="-1" aria-labelledby="enrolledStudentsModalLabel" aria-hidden="true">
+      <div class="modal fade" id="enrolledStudentsModal" tabindex="-1" aria-labelledby="enrolledStudentsModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog">
           <div class="modal-content">
             <div class="modal-header bg-success text-white">
@@ -433,6 +448,7 @@ export default {
         this.handleError(error, 'Ошибка загрузки профиля');
       }
     },
+
     async fetchUpcomingClasses() {
       const headers = this.getAuthHeaders();
       if (!headers) return;
@@ -502,14 +518,22 @@ export default {
         this.handleError(error, 'Ошибка загрузки месяцев');
       }
     },
+
     async fetchSubjects() {
-      try {
-        const response = await axios.get('http://localhost:3000/api/subjects');
-        this.subjects = response.data;
-      } catch (error) {
-        this.handleError(error, 'Ошибка загрузки предметов');
-      }
-    },
+  try {
+    const headers = this.getAuthHeaders();
+    if (!headers) return;
+    const response = await axios.get('http://localhost:3000/api/subjects', { headers });
+    this.subjects = response.data;
+  } catch (err) {
+    if (err.response?.status === 401) {
+      this.showToast('Сессия истекла, войдите снова', 'error');
+      this.logout();
+    } else {
+      this.showToast(`Ошибка загрузки предметов: ${err.message}`, 'error');
+    }
+  }
+},
     async showEnrolledStudents(classId) {
       const headers = this.getAuthHeaders();
       if (!headers) return;
@@ -527,8 +551,8 @@ export default {
       this.phoneError = !this.form.phone
         ? 'Телефон обязателен'
         : !phonePattern.test(this.form.phone)
-        ? 'Формат: +1234567890 (10-15 цифр)'
-        : '';
+          ? 'Формат: +1234567890 (10-15 цифр)'
+          : '';
     },
     openProfileModal() {
       this.form.phone = this.profile.phone || '';
@@ -547,22 +571,24 @@ export default {
       modal.show();
     },
     async submitProfile() {
-      if (this.phoneError || !this.form.phone || !this.form.education || !this.form.experience || !this.form.subject_id) {
-        this.showToast('Заполните все поля корректно', 'error');
-        return;
-      }
-      const headers = this.getAuthHeaders();
-      if (!headers) return;
-      try {
-        await axios.put('http://localhost:3000/api/teachers/profile', this.form, { headers });
-        this.showToast('Профиль сохранён', 'success');
-        await this.fetchProfile();
-        const modal = Modal.getInstance(document.getElementById('profileModal'));
-        modal.hide();
-      } catch (error) {
-        this.handleError(error, 'Ошибка сохранения профиля');
-      }
-    },
+  if (this.phoneError || !this.form.phone || !this.form.education || this.form.experience === undefined || !this.form.subject_id) {
+    this.showToast('Заполните все поля корректно', 'error');
+    return;
+  }
+  const headers = this.getAuthHeaders();
+  if (!headers) return;
+  try {
+    await axios.put('http://localhost:3000/api/teachers/profile', this.form, { headers });
+    this.showToast('Профиль сохранён', 'success');
+    await this.fetchProfile();
+    this.form = { phone: '', education: '', experience: 0, subject_id: '' }; // Reset form
+    const modal = Modal.getInstance(document.getElementById('profileModal'));
+    modal.hide();
+  } catch (error) {
+    this.handleError(error, 'Ошибка сохранения профиля');
+  }
+},
+
     async updateProfile() {
       if (this.phoneError || !this.form.phone || !this.form.education || !this.form.experience || !this.form.subject_id) {
         this.showToast('Заполните все поля корректно', 'error');
@@ -581,17 +607,24 @@ export default {
       }
     },
     setActiveTab(tab) {
-      this.activeTab = tab;
-      if (tab === 'schedule') {
-        this.fetchUpcomingClasses();
-        this.fetchCompletedClasses();
-        this.fetchDailySchedule();
-      }
-      if (tab === 'salary') {
-        this.fetchSalary();
-        this.fetchAvailableMonths();
-      }
-    },
+  if (tab !== 'profile' && !this.profile.subject_id) {
+    this.showToast('Пожалуйста, завершите заполнение профиля', 'error');
+    this.openProfileModal();
+    return;
+  }
+  this.activeTab = tab;
+  if (tab === 'schedule') {
+    this.fetchUpcomingClasses();
+    this.fetchCompletedClasses();
+    this.fetchDailySchedule();
+  }
+  if (tab === 'salary') {
+    this.fetchSalary();
+    this.fetchAvailableMonths();
+  }
+},
+
+
     setScheduleView(view) {
       this.scheduleView = view;
       if (view === 'weekly') {
@@ -615,15 +648,18 @@ export default {
     formatSalary(salary) {
       return Number(salary).toFixed(2);
     },
+
     getAuthHeaders() {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        this.showToast('Сессия истекла, войдите снова', 'error');
-        this.logout();
-        return null;
-      }
-      return { Authorization: `Bearer ${token}` };
-    },
+    const token = localStorage.getItem('token');
+    console.log('Token:', token);
+    if (!token) {
+    this.showToast('Сессия истекла, войдите снова', 'error');
+    this.logout();
+    return null;
+  }
+  return { Authorization: `Bearer ${token}` };
+},
+
     logout() {
       localStorage.removeItem('user');
       localStorage.removeItem('token');
@@ -658,6 +694,11 @@ export default {
   min-height: 100vh;
   background: linear-gradient(135deg, #d5f7d5, #e8f5e9);
   font-family: 'Comic Sans MS', 'Segoe UI', sans-serif;
+}
+.nav-link.disabled {
+  color: #6c757d;
+  pointer-events: none;
+  opacity: 0.6;
 }
 
 /* Sidebar */

@@ -6,7 +6,10 @@ import RegisterPage from '../views/RegisterPage.vue';
 import LoginPage from '../views/LoginPage.vue';
 import HomePage from '../views/Home.vue';
 import type { RouteRecordRaw } from 'vue-router';
-import axios, { AxiosError } from 'axios'; // Импортируем AxiosError
+import axios, { AxiosError } from 'axios';
+
+// Настраиваем базовый URL для axios
+axios.defaults.baseURL = 'http://localhost:3000';
 
 const routes: RouteRecordRaw[] = [
   { path: '/', component: HomePage },
@@ -64,7 +67,6 @@ router.beforeEach(async (to, from, next) => {
       console.log('Проход по маршруту:', to.path);
       next();
     } catch (err) {
-      // Указываем, что err — это AxiosError
       const error = err as AxiosError<{ error?: string }>;
       console.error(
         'Ошибка проверки токена:',
@@ -99,7 +101,6 @@ router.beforeEach(async (to, from, next) => {
         next();
       }
     } catch (err) {
-      // Указываем, что err — это AxiosError
       const error = err as AxiosError<{ error?: string }>;
       console.error(
         'Ошибка проверки токена при входе:',

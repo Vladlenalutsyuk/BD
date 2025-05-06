@@ -1,55 +1,95 @@
 <template>
   <div class="parent-page d-flex">
-    <!-- Боковое меню -->
+    <!-- Sidebar -->
     <div class="sidebar shadow-lg">
       <h3 class="text-center text-success mb-4">Меню</h3>
       <ul class="nav flex-column">
         <li class="nav-item">
-          <a class="nav-link" :class="{ active: activeTab === 'centerInfo' }" @click="activeTab = 'centerInfo'"><i class="fas fa-info-circle me-2"></i> Информация о центре</a>
+          <a
+            class="nav-link"
+            :class="{ active: activeTab === 'centerInfo' }"
+            @click="activeTab = 'centerInfo'"
+          >
+            <i class="fas fa-info-circle me-2"></i> Информация о центре
+          </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" :class="{ active: activeTab === 'personalAccount' }" @click="activeTab = 'personalAccount'"><i class="fas fa-user me-2"></i> Личный кабинет</a>
+          <a
+            class="nav-link"
+            :class="{ active: activeTab === 'personalAccount' }"
+            @click="activeTab = 'personalAccount'"
+          >
+            <i class="fas fa-user me-2"></i> Личный кабинет
+          </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" :class="{ active: activeTab === 'enroll' }" @click="activeTab = 'enroll'"><i class="fas fa-calendar-check me-2"></i> Запись на занятия</a>
+          <a
+            class="nav-link"
+            :class="{ active: activeTab === 'enroll' }"
+            @click="activeTab = 'enroll'"
+          >
+            <i class="fas fa-calendar-check me-2"></i> Запись на занятия
+          </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" :class="{ active: activeTab === 'schedule' }" @click="activeTab = 'schedule'"><i class="fas fa-calendar-alt me-2"></i> Расписание</a>
+          <a
+            class="nav-link"
+            :class="{ active: activeTab === 'schedule' }"
+            @click="activeTab = 'schedule'"
+          >
+            <i class="fas fa-calendar-alt me-2"></i> Расписание
+          </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link text-danger" @click="logout"><i class="fas fa-sign-out-alt me-2"></i> Выйти</a>
+          <a class="nav-link text-danger" @click="logout">
+            <i class="fas fa-sign-out-alt me-2"></i> Выйти
+          </a>
         </li>
       </ul>
     </div>
 
-    <!-- Основной контент -->
+    <!-- Main Content -->
     <div class="main-content p-4 flex-grow-1">
       <h1 class="mb-4 text-center text-success">Панель родителя</h1>
 
-      <!-- Вкладка: Информация о центре -->
+      <!-- Center Info Tab -->
       <div v-if="activeTab === 'centerInfo'">
         <h2>Информация о центре</h2>
         <div class="card shadow-lg p-4 mb-4">
           <h3>О нашем центре</h3>
           <p>
-            Добро пожаловать в наш детский образовательный центр! Мы предлагаем разнообразные занятия для детей от 3 до 16 лет, включая математику, рисование и музыку. Наши профессиональные преподаватели помогут вашему ребёнку раскрыть свой потенциал.
+            Добро пожаловать в наш детский образовательный центр! Мы предлагаем
+            разнообразные занятия для детей от 3 до 16 лет, включая математику,
+            рисование и музыку. Наши профессиональные преподаватели помогут вашему
+            ребёнку раскрыть свой потенциал.
           </p>
           <h4>Контакты</h4>
-          <p><strong>Адрес:</strong> ул. Ленина, д. 123, Республика Крым, г. Симферополь</p>
+          <p><strong>Адрес:</strong> ул. Ленина, д. 123, г. Симферополь</p>
           <p><strong>Телефон:</strong> +7 (123) 456-78-90</p>
           <p><strong>Email:</strong> info@childrencenter.ru</p>
         </div>
         <div class="card shadow-lg p-4 mb-4">
           <h3>Наши преподаватели</h3>
           <div class="row">
-            <div v-for="teacher in teachers" :key="teacher.id" class="col-md-4 mb-3">
+            <div
+              v-for="teacher in teachers"
+              :key="teacher.id"
+              class="col-md-4 mb-3"
+            >
               <div class="card h-100">
                 <div class="card-body">
                   <h5 class="card-title">{{ teacher.username }}</h5>
                   <p class="card-text">
-                    <strong>Предмет:</strong> {{ teacher.subject || 'Не указан' }}<br>
-                    <strong>Опыт:</strong> {{ teacher.experience ? `${teacher.experience} лет` : 'Не указан' }}<br>
-                    <strong>Образование:</strong> {{ teacher.education || 'Не указано' }}
+                    <strong>Предмет:</strong>
+                    {{ teacher.subject || "Не указан" }}<br />
+                    <strong>Опыт:</strong>
+                    {{
+                      teacher.experience
+                        ? `${teacher.experience} лет`
+                        : "Не указан"
+                    }}<br />
+                    <strong>Образование:</strong>
+                    {{ teacher.education || "Не указано" }}
                   </p>
                 </div>
               </div>
@@ -58,93 +98,204 @@
         </div>
         <div class="card shadow-lg p-4">
           <h3>Отзывы родителей</h3>
-          <div v-for="review in reviews" :key="review.id" class="review mb-3 p-3 border rounded">
-            <p><strong>{{ review.parent_name }}:</strong> {{ review.content }}</p>
+          <div
+            v-for="review in reviews"
+            :key="review.id"
+            class="review mb-3 p-3 border rounded"
+          >
+            <p>
+              <strong>{{ review.parent_name }}:</strong> {{ review.content }}
+            </p>
             <small>{{ formatDate(review.created_at) }}</small>
           </div>
           <form @submit.prevent="submitReview" class="mt-4">
             <div class="mb-3">
               <label for="newReview" class="form-label">Оставить отзыв</label>
-              <textarea v-model="newReview" id="newReview" class="form-control" rows="4" placeholder="Ваш отзыв" required></textarea>
+              <textarea
+                v-model="newReview"
+                id="newReview"
+                class="form-control"
+                rows="4"
+                placeholder="Ваш отзыв"
+                required
+              ></textarea>
             </div>
-            <button type="submit" class="btn btn-dark-green">Отправить</button>
+            <button type="submit" class="btn btn-dark-green">
+              Отправить
+            </button>
           </form>
         </div>
       </div>
 
-      <!-- Вкладка: Личный кабинет -->
+      <!-- Personal Account Tab -->
       <div v-if="activeTab === 'personalAccount'">
         <h2>Личный кабинет</h2>
         <div class="card shadow-lg p-4 mb-4">
           <h3>Ваши данные</h3>
-          <p><strong>Имя пользователя:</strong> {{ parentProfile.username }}</p>
-          <p><strong>Email:</strong> {{ parentProfile.email }}</p>
-          <p><strong>Телефон:</strong> {{ parentProfile.phone }}</p>
-
-          <!-- Кнопка "Редактировать данные" -->
-          <button v-if="!isEditingProfile" @click="startEditingProfile" class="btn btn-dark-green mt-3">
+          <p>
+            <strong>Имя пользователя:</strong>
+            {{ parentProfile.username || "Загрузка..." }}
+          </p>
+          <p>
+            <strong>Email:</strong>
+            {{ parentProfile.email || "Загрузка..." }}
+          </p>
+          <p>
+            <strong>Телефон:</strong>
+            {{ parentProfile.phone || "Загрузка..." }}
+          </p>
+          <button
+            v-if="!isEditingProfile"
+            @click="startEditingProfile"
+            class="btn btn-dark-green mt-3"
+          >
             <i class="fas fa-edit me-2"></i> Редактировать данные
           </button>
-
-          <!-- Форма редактирования профиля -->
           <div v-if="isEditingProfile" class="mt-4">
             <h4>Редактировать профиль</h4>
             <form @submit.prevent="updateProfile" class="mt-3">
               <div class="mb-3">
-                <label for="username" class="form-label">Имя пользователя</label>
-                <input v-model="editProfile.username" type="text" id="username" class="form-control" placeholder="Новое имя пользователя" required />
+                <label for="username" class="form-label"
+                  >Имя пользователя</label
+                >
+                <input
+                  v-model="editProfile.username"
+                  type="text"
+                  id="username"
+                  class="form-control"
+                  placeholder="Новое имя пользователя"
+                  required
+                />
               </div>
               <div class="mb-3">
                 <label for="email" class="form-label">Email</label>
-                <input v-model="editProfile.email" type="email" id="email" class="form-control" placeholder="Новый email" required />
+                <input
+                  v-model="editProfile.email"
+                  type="email"
+                  id="email"
+                  class="form-control"
+                  placeholder="Новый email"
+                  required
+                />
               </div>
               <div class="mb-3">
                 <label for="phone" class="form-label">Телефон</label>
-                <input v-model="editProfile.phone" type="text" id="phone" class="form-control" placeholder="+1234567890" required />
-                <small v-if="phoneError" class="text-danger">{{ phoneError }}</small>
+                <input
+                  v-model="editProfile.phone"
+                  type="text"
+                  id="phone"
+                  class="form-control"
+                  placeholder="+1234567890"
+                  required
+                  @input="validatePhone"
+                />
+                <small v-if="phoneError" class="text-danger">{{
+                  phoneError
+                }}</small>
               </div>
               <div class="mb-3">
-                <label for="password" class="form-label">Новый пароль (оставьте пустым, если не хотите менять)</label>
-                <input v-model="editProfile.password" type="password" id="password" class="form-control" placeholder="Новый пароль" />
+                <label for="password" class="form-label"
+                  >Новый пароль (оставьте пустым, если не хотите менять)</label
+                >
+                <input
+                  v-model="editProfile.password"
+                  type="password"
+                  id="password"
+                  class="form-control"
+                  placeholder="Новый пароль"
+                />
               </div>
               <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-dark-green w-50" :disabled="!!phoneError"><i class="fas fa-save me-2"></i> Сохранить изменения</button>
-                <button type="button" @click="cancelEditingProfile" class="btn btn-secondary w-50"><i class="fas fa-times me-2"></i> Отмена</button>
+                <button
+                  type="submit"
+                  class="btn btn-dark-green w-50"
+                  :disabled="isLoading || !!phoneError"
+                >
+                  <i class="fas fa-save me-2"></i>
+                  {{ isLoading ? "Сохранение..." : "Сохранить изменения" }}
+                </button>
+                <button
+                  type="button"
+                  @click="cancelEditingProfile"
+                  class="btn btn-secondary w-50"
+                >
+                  <i class="fas fa-times me-2"></i> Отмена
+                </button>
               </div>
             </form>
           </div>
         </div>
-
-        <!-- Ваши дети -->
         <div class="card shadow-lg p-4">
           <h3>Ваши дети</h3>
-          <button @click="showAddChildForm = true" class="btn btn-dark-green mb-3"><i class="fas fa-plus-circle me-2"></i> Добавить ребёнка</button>
-          
+          <button
+            @click="showAddChildForm = true"
+            class="btn btn-dark-green mb-3"
+          >
+            <i class="fas fa-plus-circle me-2"></i> Добавить ребёнка
+          </button>
           <div v-if="showAddChildForm" class="mb-4">
             <h4>Добавить ребёнка</h4>
             <form @submit.prevent="addChild" class="add-child-form">
               <div class="mb-3">
                 <label for="child_name" class="form-label">Имя ребёнка</label>
-                <input v-model="newChild.name" type="text" id="child_name" class="form-control" placeholder="Введите ФИО ребенка" required />
+                <input
+                  v-model="newChild.name"
+                  type="text"
+                  id="child_name"
+                  class="form-control"
+                  placeholder="Введите ФИО ребенка"
+                  required
+                />
               </div>
               <div class="mb-3">
-                <label for="birth_date" class="form-label">Дата рождения</label>
-                <input v-model="newChild.birth_date" type="date" id="birth_date" class="form-control" required />
+                <label for="birth_date" class="form-label"
+                  >Дата рождения</label
+                >
+                <input
+                  v-model="newChild.birth_date"
+                  type="date"
+                  id="birth_date"
+                  class="form-control"
+                  required
+                />
               </div>
               <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-dark-green w-50"><i class="fas fa-save me-2"></i> Добавить</button>
-                <button type="button" @click="showAddChildForm = false" class="btn btn-secondary w-50"><i class="fas fa-times me-2"></i> Отмена</button>
+                <button
+                  type="submit"
+                  class="btn btn-dark-green w-50"
+                  :disabled="isLoading"
+                >
+                  {{ isLoading ? "Добавление..." : "Добавить" }}
+                </button>
+                <button
+                  type="button"
+                  @click="showAddChildForm = false"
+                  class="btn btn-secondary w-50"
+                >
+                  <i class="fas fa-times me-2"></i> Отмена
+                </button>
               </div>
             </form>
           </div>
-
           <div v-if="children.length" class="row">
-            <div v-for="child in children" :key="child.id" class="col-md-4 mb-3">
+            <div
+              v-for="child in children"
+              :key="child.id"
+              class="col-md-4 mb-3"
+            >
               <div class="card h-100">
                 <div class="card-body">
                   <h5 class="card-title">{{ child.name }}</h5>
-                  <p class="card-text"><strong>Дата рождения:</strong> {{ formatDate(child.birth_date) }}</p>
-                  <button @click="editChild(child)" class="btn btn-dark-green btn-sm"><i class="fas fa-edit me-2"></i> Редактировать</button>
+                  <p class="card-text">
+                    <strong>Дата рождения:</strong>
+                    {{ formatDate(child.birth_date) }}
+                  </p>
+                  <button
+                    @click="editChild(child)"
+                    class="btn btn-dark-green btn-sm"
+                  >
+                    <i class="fas fa-edit me-2"></i> Редактировать
+                  </button>
                 </div>
               </div>
             </div>
@@ -152,101 +303,166 @@
           <div v-else-if="!showAddChildForm" class="text-center text-muted">
             У вас нет добавленных детей. Нажмите "Добавить ребёнка", чтобы начать.
           </div>
-
           <div v-if="showEditChildForm" class="mt-4">
             <h4>Редактировать данные ребёнка</h4>
             <form @submit.prevent="updateChild" class="edit-child-form">
               <div class="mb-3">
-                <label for="edit_child_name" class="form-label">Имя ребёнка</label>
-                <input v-model="editChildData.name" type="text" id="edit_child_name" class="form-control" required />
+                <label for="edit_child_name" class="form-label"
+                  >Имя ребёнка</label
+                >
+                <input
+                  v-model="editChildData.name"
+                  type="text"
+                  id="edit_child_name"
+                  class="form-control"
+                  required
+                />
               </div>
               <div class="mb-3">
-                <label for="edit_birth_date" class="form-label">Дата рождения</label>
-                <input v-model="editChildData.birth_date" type="date" id="edit_birth_date" class="form-control" required />
+                <label for="edit_birth_date" class="form-label"
+                  >Дата рождения</label
+                >
+                <input
+                  v-model="editChildData.birth_date"
+                  type="date"
+                  id="edit_birth_date"
+                  class="form-control"
+                  required
+                />
               </div>
               <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-dark-green w-50"><i class="fas fa-save me-2"></i> Сохранить</button>
-                <button type="button" @click="showEditChildForm = false" class="btn btn-secondary w-50"><i class="fas fa-times me-2"></i> Отмена</button>
+                <button
+                  type="submit"
+                  class="btn btn-dark-green w-50"
+                  :disabled="isLoading"
+                >
+                  {{ isLoading ? "Сохранение..." : "Сохранить" }}
+                </button>
+                <button
+                  type="button"
+                  @click="showEditChildForm = false"
+                  class="btn btn-secondary w-50"
+                >
+                  <i class="fas fa-times me-2"></i> Отмена
+                </button>
               </div>
             </form>
           </div>
         </div>
       </div>
 
-      <!-- Вкладка: Запись на занятия -->
+      <!-- Enroll Tab -->
       <div v-if="activeTab === 'enroll'">
-        <h2 class="mb-4">Записаться на занятие</h2>
-        <div class="mb-4">
-          <select v-model="selectedChild" class="form-select w-auto d-inline-block me-2" @change="fetchClasses">
-            <option value="" disabled>Выберите ребенка</option>
-            <option v-for="child in children" :key="child.id" :value="child.id">{{ child.name }}</option>
-          </select>
-          <select v-model="selectedSubject" class="form-select w-auto d-inline-block" @change="fetchClasses">
-            <option value="">Все предметы</option>
-            <option v-for="subject in subjects" :key="subject.id" :value="subject.id">{{ subject.name }}</option>
-          </select>
-        </div>
-        <table class="table table-striped shadow-lg">
-          <thead class="table-success">
-            <tr>
-              <th>Занятие</th>
-              <th>Тип</th>
-              <th>Возрастная группа</th>
-              <th>Время</th>
-              <th>Кабинет</th>
-              <th>Стоимость</th>
-              <th>Действие</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="classItem in classes" :key="classItem.id">
-              <td>{{ classItem.subject }}</td>
-              <td>
-                <span :class="classItem.class_type === 'individual' ? 'badge bg-primary' : 'badge bg-success'">
-                  {{ classItem.class_type === 'individual' ? 'Индивидуальное' : 'Групповое' }}
-                </span>
-              </td>
-              <td>
-                <span v-if="classItem.class_type === 'group'">
-                  {{ classItem.min_age }}-{{ classItem.max_age }} лет
-                </span>
-                <span v-else>3-16 лет</span>
-              </td>
-              <td>{{ formatDateTime(classItem.schedule) }}</td>
-              <td>{{ classItem.room || 'Не указан' }}</td>
-              <td>{{ classItem.price }} руб.</td>
-              <td>
-                <button
-                  v-if="selectedChild"
-                  @click="enrollChild(classItem.id)"
-                  class="btn btn-dark-green btn-sm"
-                  :disabled="!selectedChild || isChildEnrolled(classItem.id)"
-                >
-                  {{ isChildEnrolled(classItem.id) ? 'Записан' : 'Записаться' }}
-                </button>
-              </td>
-            </tr>
-            <tr v-if="!classes.length">
-              <td colspan="7" class="text-center">Занятия не найдены</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+  <h2 class="mb-4">Записаться на занятие</h2>
+  <div class="mb-4">
+    <select
+      v-model="selectedChild"
+      class="form-select w-auto d-inline-block me-2"
+      @change="fetchClasses"
+    >
+      <option value="" disabled>Выберите ребенка</option>
+      <option v-for="child in children" :key="child.id" :value="child.id">
+        {{ child.name }} ({{ getChildAge(child.birth_date) }} лет)
+      </option>
+    </select>
+    <select
+      v-model="selectedSubject"
+      class="form-select w-auto d-inline-block"
+      :disabled="!selectedChild"
+      @change="fetchClasses"
+    >
+      <option value="">Все предметы</option>
+      <option
+        v-for="subject in subjects"
+        :key="subject.id"
+        :value="subject.id"
+      >
+        {{ subject.name }}
+      </option>
+    </select>
+  </div>
+  <div v-if="!selectedChild" class="alert alert-info text-center">
+    Пожалуйста, выберите ребенка, чтобы увидеть доступные занятия.
+  </div>
+  <table v-else class="table table-striped shadow-lg">
+    <thead class="table-success">
+      <tr>
+        <th>Занятие</th>
+        <th>Тип</th>
+        <th>Возрастная группа</th>
+        <th>Время</th>
+        <th>Кабинет</th>
+        <th>Стоимость</th>
+        <th>Действие</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr v-for="classItem in classes" :key="classItem.id">
+        <td>{{ classItem.subject }}</td>
+        <td>
+          <span
+            :class="
+              classItem.class_type === 'individual'
+                ? 'badge bg-primary'
+                : 'badge bg-success'
+            "
+          >
+            {{
+              classItem.class_type === "individual"
+                ? "Индивидуальное"
+                : "Групповое"
+            }}
+          </span>
+        </td>
+        <td>
+          <span v-if="classItem.class_type === 'group'">
+            {{ classItem.min_age }}-{{ classItem.max_age }} лет
+          </span>
+          <span v-else>3-16 лет</span>
+        </td>
+        <td>{{ formatDateTime(classItem.schedule) }}</td>
+        <td>{{ classItem.room || "Не указан" }}</td>
+        <td>{{ classItem.price }} руб.</td>
+        <td>
+          <button
+            @click="enrollChild(classItem.id)"
+            class="btn btn-dark-green btn-sm"
+            :disabled="isChildEnrolled(classItem.id)"
+          >
+            {{ isChildEnrolled(classItem.id) ? "Записан" : "Записаться" }}
+          </button>
+        </td>
+      </tr>
+      <tr v-if="!classes.length">
+        <td colspan="7" class="text-center">Занятия не найдены</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
-      <!-- Вкладка: Расписание -->
+      <!-- Schedule Tab -->
       <div v-if="activeTab === 'schedule'">
         <h2 class="mb-4">Расписание</h2>
         <div class="mb-4">
-          <select v-model="selectedChildForSchedule" class="form-select w-auto d-inline-block me-2" @change="fetchSchedule">
+          <select
+            v-model="selectedChildForSchedule"
+            class="form-select w-auto d-inline-block me-2"
+            @change="fetchSchedule"
+          >
             <option value="" disabled>Выберите ребенка</option>
             <option value="all">Все дети</option>
-            <option v-for="child in children" :key="child.id" :value="child.id">{{ child.name }}</option>
+            <option v-for="child in children" :key="child.id" :value="child.id">
+              {{ child.name }}
+            </option>
           </select>
-          <button @click="togglePastClasses" class="btn btn-dark-green btn-sm">
-            {{ showPastClasses ? 'Скрыть прошедшие' : 'Показать прошедшие' }}
+          <button
+            @click="togglePastClasses"
+            class="btn btn-dark-green btn-sm"
+          >
+            {{ showPastClasses ? "Скрыть прошедшие" : "Показать прошедшие" }}
           </button>
         </div>
-        <!-- Будущие занятия -->
+        <!-- Future Classes -->
         <h3>Будущие занятия</h3>
         <table class="table table-striped shadow-lg">
           <thead class="table-success">
@@ -264,8 +480,18 @@
             <tr v-for="scheduleItem in futureSchedule" :key="scheduleItem.id">
               <td>{{ scheduleItem.subject }}</td>
               <td>
-                <span :class="scheduleItem.class_type === 'individual' ? 'badge bg-primary' : 'badge bg-success'">
-                  {{ scheduleItem.class_type === 'individual' ? 'Индивидуальное' : 'Групповое' }}
+                <span
+                  :class="
+                    scheduleItem.class_type === 'individual'
+                      ? 'badge bg-primary'
+                      : 'badge bg-success'
+                  "
+                >
+                  {{
+                    scheduleItem.class_type === "individual"
+                      ? "Индивидуальное"
+                      : "Групповое"
+                  }}
                 </span>
               </td>
               <td>
@@ -275,7 +501,7 @@
                 <span v-else>3-16 лет</span>
               </td>
               <td>{{ formatDateTime(scheduleItem.schedule) }}</td>
-              <td>{{ scheduleItem.room || 'Не указан' }}</td>
+              <td>{{ scheduleItem.room || "Не указан" }}</td>
               <td>{{ scheduleItem.price }} руб.</td>
               <td>
                 <button
@@ -287,14 +513,18 @@
               </td>
             </tr>
             <tr v-if="!futureSchedule.length && selectedChildForSchedule">
-              <td colspan="7" class="text-center">Ребёнок не записан на будущие занятия</td>
+              <td colspan="7" class="text-center">
+                Ребёнок не записан на будущие занятия
+              </td>
             </tr>
             <tr v-if="!futureSchedule.length && !selectedChildForSchedule">
-              <td colspan="7" class="text-center">Выберите ребёнка для просмотра расписания</td>
+              <td colspan="7" class="text-center">
+                Выберите ребёнка для просмотра расписания
+              </td>
             </tr>
           </tbody>
         </table>
-        <!-- Прошедшие занятия -->
+        <!-- Past Classes -->
         <div v-if="showPastClasses">
           <h3 class="mt-4">Прошедшие занятия</h3>
           <table class="table table-striped shadow-lg">
@@ -312,8 +542,18 @@
               <tr v-for="scheduleItem in pastSchedule" :key="scheduleItem.id">
                 <td>{{ scheduleItem.subject }}</td>
                 <td>
-                  <span :class="scheduleItem.class_type === 'individual' ? 'badge bg-primary' : 'badge bg-success'">
-                    {{ scheduleItem.class_type === 'individual' ? 'Индивидуальное' : 'Групповое' }}
+                  <span
+                    :class="
+                      scheduleItem.class_type === 'individual'
+                        ? 'badge bg-primary'
+                        : 'badge bg-success'
+                    "
+                  >
+                    {{
+                      scheduleItem.class_type === "individual"
+                        ? "Индивидуальное"
+                        : "Групповое"
+                    }}
                   </span>
                 </td>
                 <td>
@@ -323,7 +563,7 @@
                   <span v-else>3-16 лет</span>
                 </td>
                 <td>{{ formatDateTime(scheduleItem.schedule) }}</td>
-                <td>{{ scheduleItem.room || 'Не указан' }}</td>
+                <td>{{ scheduleItem.room || "Не указан" }}</td>
                 <td>{{ scheduleItem.price }} руб.</td>
               </tr>
               <tr v-if="!pastSchedule.length && selectedChildForSchedule">
@@ -338,100 +578,161 @@
 </template>
 
 <script>
-import axios from 'axios';
+import axios from "axios";
 
 export default {
-  name: 'ParentPage',
+  name: "ParentPage",
   data() {
     return {
-      activeTab: 'centerInfo',
+      activeTab: "centerInfo",
       user: null,
       children: [],
       classes: [],
       subjects: [],
-      selectedChild: '',
-      selectedSubject: '',
+      selectedChild: "",
+      selectedSubject: "",
       schedule: [],
-      selectedChildForSchedule: '',
+      selectedChildForSchedule: "",
       reviews: [],
-      teachers: [], // New data for teachers
-      newReview: '',
+      teachers: [],
+      newReview: "",
       parentProfile: {
-        username: '',
-        email: '',
-        phone: '',
+        username: "",
+        email: "",
+        phone: "",
       },
       editProfile: {
-        username: '',
-        email: '',
-        phone: '',
-        password: '',
+        username: "",
+        email: "",
+        phone: "",
+        password: "",
       },
       isEditingProfile: false,
       showAddChildForm: false,
       showEditChildForm: false,
-      newChild: { name: '', birth_date: '' },
-      editChildData: { id: '', name: '', birth_date: '' },
+      newChild: { name: "", birth_date: "" },
+      editChildData: { id: "", name: "", birth_date: "" },
       phoneError: null,
-      showPastClasses: false, // Toggle for past classes
+      showPastClasses: false,
+      isLoading: false,
     };
   },
   computed: {
     futureSchedule() {
-      return this.schedule.filter(item => new Date(item.schedule) > new Date());
+      return this.schedule.filter(
+        (item) => new Date(item.schedule) > new Date() && !item.completed
+      );
     },
     pastSchedule() {
-      return this.schedule.filter(item => new Date(item.schedule) <= new Date());
+      return this.schedule.filter(
+        (item) => new Date(item.schedule) <= new Date() || item.completed
+      );
     },
+    selectedChildAge() {
+  if (!this.selectedChild) return null;
+  const child = this.children.find((c) => c.id === this.selectedChild);
+  if (!child || !child.birth_date) return null;
+  const birthDate = new Date(child.birth_date);
+  const today = new Date();
+  return Math.floor((today - birthDate) / (365.25 * 24 * 60 * 60 * 1000));
+},
   },
-  methods: {
+  methods: 
+  {
+    getChildAge(birthDate) {
+  const birth = new Date(birthDate);
+  const today = new Date();
+  return Math.floor((today - birth) / (365.25 * 24 * 60 * 60 * 1000));
+},
     async fetchParentProfile() {
       const headers = this.getAuthHeaders();
       if (!headers) return;
       try {
-        const response = await axios.get('http://localhost:3000/api/parent/profile', { headers });
+        this.isLoading = true;
+        const response = await axios.get(
+          "http://localhost:3000/api/parent/profile",
+          { headers }
+        );
         this.parentProfile = response.data;
       } catch (error) {
-        this.handleError(error, 'Ошибка при загрузке профиля');
+        this.handleError(error, "Ошибка при загрузке профиля");
+      } finally {
+        this.isLoading = false;
       }
     },
     async fetchTeachers() {
       try {
-        const response = await axios.get('http://localhost:3000/api/users/teachers/public');
+        this.isLoading = true;
+        const response = await axios.get(
+          "http://localhost:3000/api/users/teachers/public"
+        );
         this.teachers = response.data;
       } catch (error) {
-        this.handleError(error, 'Ошибка при загрузке данных учителей');
+        this.handleError(error, "Ошибка при загрузке данных учителей");
+      } finally {
+        this.isLoading = false;
       }
     },
     async fetchClasses() {
-      const headers = this.getAuthHeaders();
-      if (!headers) return;
-      try {
-        const params = {};
-        if (this.selectedSubject) params.subject_id = this.selectedSubject;
-        if (this.selectedChild) params.child_id = this.selectedChild; // Filter by child age
-        const response = await axios.get('http://localhost:3000/api/classes/public', { headers, params });
-        this.classes = response.data;
-      } catch (error) {
-        this.handleError(error, 'Ошибка при получении расписания');
-      }
-    },
+  if (!this.selectedChild) {
+    this.classes = [];
+    return;
+  }
+  try {
+    this.isLoading = true;
+    const headers = this.getAuthHeaders();
+    if (!headers) return;
+    const params = {};
+    if (this.selectedSubject) params.subject_id = this.selectedSubject;
+    if (this.selectedChild) params.child_id = this.selectedChild;
+    const response = await axios.get("http://localhost:3000/api/classes/public", {
+      params,
+      headers,
+    });
+    this.classes = response.data || [];
+    console.log("Fetched classes:", this.classes);
+    if (!this.classes.length) {
+      this.showToast("Нет доступных занятий для выбранных фильтров", "info");
+    }
+  } catch (error) {
+    this.handleError(error, "Ошибка при получении расписания");
+  } finally {
+    this.isLoading = false;
+  }
+},
+
+
     async fetchSubjects() {
       try {
-        const response = await axios.get('http://localhost:3000/api/subjects');
+        this.isLoading = true;
+        const response = await axios.get(
+          "http://localhost:3000/api/subjects/public"
+        );
         this.subjects = response.data;
       } catch (error) {
-        this.handleError(error, 'Ошибка при загрузке предметов');
+        this.handleError(error, "Ошибка при загрузке предметов");
+      } finally {
+        this.isLoading = false;
       }
     },
     async fetchChildren() {
       const headers = this.getAuthHeaders();
       if (!headers) return;
       try {
-        const response = await axios.get('http://localhost:3000/api/parent/children', { headers });
+        this.isLoading = true;
+        const response = await axios.get(
+          "http://localhost:3000/api/parent/children",
+          { headers }
+        );
         this.children = response.data;
+        if (this.children.length && !this.selectedChild) {
+          this.selectedChild = this.children[0].id;
+          await this.fetchClasses();
+        }
       } catch (error) {
-        this.handleError(error, 'Ошибка при получении списка детей');
+        this.handleError(error, "Ошибка при получении списка детей");
+      } finally {
+        this.isLoading = false;
       }
     },
     async fetchSchedule() {
@@ -442,116 +743,177 @@ export default {
       const headers = this.getAuthHeaders();
       if (!headers) return;
       try {
+        this.isLoading = true;
         const params = this.showPastClasses ? { includePast: true } : {};
-        const response = await axios.get(`http://localhost:3000/api/parent/schedule/${this.selectedChildForSchedule}`, { headers, params });
+        const response = await axios.get(
+          `http://localhost:3000/api/parent/schedule/${this.selectedChildForSchedule}`,
+          { headers, params }
+        );
         this.schedule = response.data;
       } catch (error) {
-        this.handleError(error, 'Ошибка при получении расписания');
+        this.handleError(error, "Ошибка при получении расписания");
+      } finally {
+        this.isLoading = false;
       }
     },
     async fetchReviews() {
       try {
-        const response = await axios.get('http://localhost:3000/api/reviews');
+        this.isLoading = true;
+        const response = await axios.get("http://localhost:3000/api/reviews");
         this.reviews = response.data;
       } catch (error) {
-        this.handleError(error, 'Ошибка при загрузке отзывов');
+        this.handleError(error, "Ошибка при загрузке отзывов");
+      } finally {
+        this.isLoading = false;
       }
     },
     async submitReview() {
       const headers = this.getAuthHeaders();
       if (!headers) return;
       try {
-        await axios.post('http://localhost:3000/api/reviews', { content: this.newReview }, { headers });
-        this.showToast('Отзыв отправлен!', 'success');
-        this.newReview = '';
-        this.fetchReviews();
+        this.isLoading = true;
+        await axios.post(
+          "http://localhost:3000/api/reviews",
+          { content: this.newReview },
+          { headers }
+        );
+        this.showToast("Отзыв отправлен!", "success");
+        this.newReview = "";
+        await this.fetchReviews();
       } catch (error) {
-        this.handleError(error, 'Ошибка при отправке отзыва');
+        this.handleError(error, "Ошибка при отправке отзыва");
+      } finally {
+        this.isLoading = false;
       }
     },
     async addChild() {
       const headers = this.getAuthHeaders();
       if (!headers) return;
       try {
-        await axios.post('http://localhost:3000/api/parent/children', this.newChild, { headers });
-        this.showToast('Ребёнок добавлен!', 'success');
-        this.newChild = { name: '', birth_date: '' };
+        this.isLoading = true;
+        await axios.post(
+          "http://localhost:3000/api/parent/children",
+          this.newChild,
+          { headers }
+        );
+        this.showToast("Ребёнок добавлен!", "success");
+        this.newChild = { name: "", birth_date: "" };
         this.showAddChildForm = false;
-        this.fetchChildren();
+        await this.fetchChildren();
       } catch (error) {
-        this.handleError(error, 'Ошибка при добавлении ребёнка');
+        this.handleError(error, "Ошибка при добавлении ребёнка");
+      } finally {
+        this.isLoading = false;
       }
     },
     async updateChild() {
       const headers = this.getAuthHeaders();
       if (!headers) return;
       try {
-        await axios.put(`http://localhost:3000/api/parent/children/${this.editChildData.id}`, this.editChildData, { headers });
-        this.showToast('Данные ребёнка обновлены!', 'success');
+        this.isLoading = true;
+        await axios.put(
+          `http://localhost:3000/api/parent/children/${this.editChildData.id}`,
+          this.editChildData,
+          { headers }
+        );
+        this.showToast("Данные ребёнка обновлены!", "success");
         this.showEditChildForm = false;
-        this.fetchChildren();
+        await this.fetchChildren();
       } catch (error) {
-        this.handleError(error, 'Ошибка при обновлении ребёнка');
+        this.handleError(error, "Ошибка при обновлении ребёнка");
+      } finally {
+        this.isLoading = false;
       }
     },
     async enrollChild(classId) {
       const headers = this.getAuthHeaders();
       if (!headers) return;
+      if (!classId || !this.selectedChild) {
+        this.showToast("Выберите занятие и ребёнка", "error");
+        return;
+      }
+      console.log('Attempting to enroll:', { classId, childId: this.selectedChild }); // Debugging log
       try {
-        await axios.post('http://localhost:3000/api/enrollments', { child_id: this.selectedChild, class_id: classId }, { headers });
-        this.showToast('Ребёнок записан на занятие!', 'success');
-        this.fetchClasses();
-        this.fetchSchedule();
+        this.isLoading = true;
+        await axios.post(
+          "http://localhost:3000/api/enrollments",
+          { child_id: this.selectedChild, class_id: classId },
+          { headers }
+        );
+        this.showToast("Ребёнок записан на занятие!", "success");
+        await Promise.all([this.fetchClasses(), this.fetchSchedule()]);
       } catch (error) {
-        this.handleError(error, 'Ошибка при записи на занятие');
+        this.handleError(error, "Ошибка при записи на занятие");
+      } finally {
+        this.isLoading = false;
       }
     },
     async unenrollChild(classId) {
       const headers = this.getAuthHeaders();
       if (!headers) return;
       try {
-        await axios.delete(`http://localhost:3000/api/enrollments/${this.selectedChildForSchedule}/${classId}`, { headers });
-        this.showToast('Запись отменена!', 'success');
-        this.fetchSchedule();
-        this.fetchClasses();
+        this.isLoading = true;
+        await axios.delete(
+          `http://localhost:3000/api/enrollments/${this.selectedChildForSchedule}/${classId}`,
+          { headers }
+        );
+        this.showToast("Запись отменена!", "success");
+        await Promise.all([this.fetchSchedule(), this.fetchClasses()]);
       } catch (error) {
-        this.handleError(error, 'Ошибка при отмене записи');
+        this.handleError(error, "Ошибка при отмене записи");
+      } finally {
+        this.isLoading = false;
       }
     },
     startEditingProfile() {
       this.isEditingProfile = true;
-      this.editProfile = { ...this.parentProfile, password: '' };
+      this.editProfile = { ...this.parentProfile, password: "" };
+      this.validatePhone();
     },
     cancelEditingProfile() {
       this.isEditingProfile = false;
-      this.editProfile = { username: '', email: '', phone: '', password: '' };
+      this.editProfile = { username: "", email: "", phone: "", password: "" };
       this.phoneError = null;
     },
     async updateProfile() {
       const headers = this.getAuthHeaders();
       if (!headers) return;
       if (this.phoneError) {
-        this.showToast('Исправьте ошибки в номере телефона', 'error');
+        this.showToast("Исправьте ошибки в номере телефона", "error");
         return;
       }
       try {
+        this.isLoading = true;
         const updateData = {};
-        if (this.editProfile.username) updateData.username = this.editProfile.username;
+        if (this.editProfile.username)
+          updateData.username = this.editProfile.username;
         if (this.editProfile.email) updateData.email = this.editProfile.email;
         if (this.editProfile.phone) updateData.phone = this.editProfile.phone;
-        if (this.editProfile.password) updateData.password = this.editProfile.password;
-        await axios.put(`http://localhost:3000/api/parent/profile`, updateData, { headers });
-        this.showToast('Профиль обновлён!', 'success');
+        if (this.editProfile.password)
+          updateData.password = this.editProfile.password;
+        await axios.put(
+          "http://localhost:3000/api/parent/profile",
+          updateData,
+          { headers }
+        );
+        this.showToast("Профиль обновлён!", "success");
         this.isEditingProfile = false;
-        this.editProfile = { username: '', email: '', phone: '', password: '' };
-        this.fetchParentProfile();
-        const user = JSON.parse(localStorage.getItem('user') || 'null');
+        this.editProfile = {
+          username: "",
+          email: "",
+          phone: "",
+          password: "",
+        };
+        await this.fetchParentProfile();
+        const user = JSON.parse(localStorage.getItem("user") || "null");
         if (user) {
           const updatedUser = { ...user, ...updateData };
-          localStorage.setItem('user', JSON.stringify(updatedUser));
+          localStorage.setItem("user", JSON.stringify(updatedUser));
         }
       } catch (error) {
-        this.handleError(error, 'Ошибка при обновлении профиля');
+        this.handleError(error, "Ошибка при обновлении профиля");
+      } finally {
+        this.isLoading = false;
       }
     },
     editChild(child) {
@@ -567,194 +929,154 @@ export default {
       if (!this.editProfile.phone) {
         this.phoneError = 'Поле "Телефон" обязательно';
       } else if (!phonePattern.test(this.editProfile.phone)) {
-        this.phoneError = 'Введите номер телефона в формате +1234567890 (10-15 цифр)';
+        this.phoneError =
+          "Введите номер телефона в формате +1234567890 (10-15 цифр)";
       } else {
         this.phoneError = null;
       }
     },
     logout() {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-      this.$router.push('/login');
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      this.$router.push("/login");
     },
     getAuthHeaders() {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (!token) {
-        this.showToast('Сессия истекла, войдите снова', 'error');
+        this.showToast("Сессия истекла, войдите снова", "error");
         this.logout();
         return null;
       }
       return { Authorization: `Bearer ${token}` };
     },
     formatDate(date) {
-      return new Date(date).toLocaleDateString('ru-RU');
+      return new Date(date).toLocaleDateString("ru-RU");
     },
     formatDateTime(date) {
-      return new Date(date).toLocaleString('ru-RU');
+      return new Date(date).toLocaleString("ru-RU");
     },
     isChildEnrolled(classId) {
-      return this.schedule.some(item => item.id === classId && this.selectedChild === this.selectedChildForSchedule);
+      return this.schedule.some((item) => item.id === classId);
     },
-    showToast(message, type = 'error') {
+    showToast(message, type = "error") {
       if (this.$toast) {
         this.$toast[type](message, { timeout: 5000 });
       } else {
-        console[type === 'error' ? 'error' : 'log'](`Toast (${type}): ${message}`);
+        console[type === "error" ? "error" : "log"](`Toast (${type}): ${message}`);
         alert(message);
       }
     },
     handleError(error, defaultMessage) {
-      if (error.response?.status === 403) {
-        this.showToast('Сессия истекла, войдите снова', 'error');
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        this.showToast("Сессия истекла, войдите снова", "error");
         this.logout();
       } else {
-        this.showToast(`${defaultMessage}: ${error.response?.data?.error || error.message}`, 'error');
+        this.showToast(
+          `${defaultMessage}: ${error.response?.data?.error || error.message}`,
+          "error"
+        );
       }
     },
   },
+
   watch: {
-    'editProfile.phone': 'validatePhone',
+  "editProfile.phone": "validatePhone",
+  selectedChild() {
+    this.fetchClasses();
   },
-  mounted() {
-    this.user = JSON.parse(localStorage.getItem('user') || 'null');
-    if (!this.user || this.user.role !== 'parent') {
-      this.showToast('Сессия истекла или доступ запрещён', 'error');
-      this.$router.push('/login');
-    } else {
-      this.fetchParentProfile();
-      this.fetchChildren();
-      this.fetchClasses();
-      this.fetchSubjects();
-      this.fetchReviews();
-      this.fetchTeachers();
+  selectedSubject() {
+    this.fetchClasses();
+  },
+},
+
+
+  async mounted() {
+    this.user = JSON.parse(localStorage.getItem("user") || "null");
+    if (!this.user || this.user.role !== "parent") {
+      this.showToast("Доступ запрещён", "error");
+      this.$router.push("/login");
+      return;
+    }
+    try {
+      await Promise.all([
+        this.fetchParentProfile(),
+        this.fetchChildren(),
+        this.fetchSubjects(),
+        this.fetchTeachers(),
+        this.fetchReviews(),
+      ]);
+    } catch (error) {
+      this.handleError(error, "Ошибка при инициализации страницы");
     }
   },
 };
 </script>
 
-
 <style scoped>
-.teacher-card {
-  transition: transform 0.3s ease;
-}
-
-.teacher-card:hover {
-  transform: translateY(-5px);
-}
-
-.btn-sm {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.875rem;
-}
 .parent-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #d5f7d5, #e8f5e9);
-  font-family: 'Comic Sans MS', 'Segoe UI', sans-serif;
+  background-color: #f8f9fa;
 }
 
 .sidebar {
   width: 250px;
-  background: #ffffff;
+  background-color: #ffffff;
   padding: 20px;
-  border-right: 1px solid #ddd;
-  height: 100vh;
-  position: fixed;
-  top: 0;
-  left: 0;
-  overflow-y: auto;
-}
-
-.main-content {
-  margin-left: 270px;
-  padding: 40px;
+  border-right: 1px solid #dee2e6;
 }
 
 .nav-link {
-  color: #2e7d32;
+  color: #333;
   cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.nav-link.active {
-  background-color: #2e7d32;
-  color: white;
+  padding: 10px;
   border-radius: 5px;
+  transition: background-color 0.3s;
 }
 
 .nav-link:hover {
-  background-color: #e8f5e9;
+  background-color: #e9ecef;
+}
+
+.nav-link.active {
+  background-color: #28a745;
+  color: white !important;
+}
+
+.main-content {
+  background-color: #ffffff;
+  border-radius: 10px;
+  margin: 20px;
 }
 
 .card {
-  border-radius: 15px;
-  background: linear-gradient(145deg, #ffffff, #f0f8f0);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-.card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-}
-
-.btn-dark-green {
-  background-color: #2e7d32;
-  color: white;
   border: none;
-  transition: background-color 0.3s ease;
-}
-
-.btn-dark-green:hover {
-  background-color: #256528;
-}
-
-.btn-dark-green i {
-  margin-right: 5px;
-}
-
-.btn-secondary {
-  background-color: #6c757d;
-}
-
-.btn-secondary:hover {
-  background-color: #5a6268;
-}
-
-.table {
-  background: #ffffff;
   border-radius: 10px;
 }
 
-.table-striped tbody tr:nth-of-type(odd) {
-  background-color: rgba(0, 0, 0, 0.05);
-}
-
-.table-success {
-  background-color: #2e7d32;
+.btn-dark-green {
+  background-color: #28a745;
+  border-color: #28a745;
   color: white;
 }
 
-.rounded-circle {
-  width: 100px;
-  height: 100px;
-  object-fit: cover;
-  border: 3px solid #2e7d32;
+.btn-dark-green:hover {
+  background-color: #218838;
+  border-color: #1e7e34;
 }
 
-.badge {
-  font-size: 0.9em;
-  padding: 0.3em 0.6em;
+.table-success {
+  background-color: #d4edda;
+}
+
+.badge.bg-primary {
+  background-color: #007bff !important;
+}
+
+.badge.bg-success {
+  background-color: #28a745 !important;
 }
 
 .review {
-  background: #f8f9fa;
-  border: 1px solid #ddd;
-}
-
-.animate__animated.animate__fadeIn {
-  animation-duration: 0.5s;
-}
-
-.animate__animated.animate__zoomIn {
-  animation-duration: 0.5s;
+  background-color: #f8f9fa;
 }
 </style>

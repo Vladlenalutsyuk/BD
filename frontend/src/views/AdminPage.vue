@@ -581,37 +581,41 @@
         <!-- Statistics Tab -->
         <div v-else-if="activeTab === 'statistics'">
           <h2>Статистика</h2>
-          <div class="mb-4">
-            <label for="month-filter" class="form-label">Выберите месяц</label>
-            <input type="month" id="month-filter" class="form-control w-auto" v-model="selectedMonth" @change="fetchStatistics" />
+          <div class="mb-4 d-flex align-items-center">
+            <label for="month-filter" class="form-label me-3">Фильтр по месяцу:</label>
+            <input type="month" id="month-filter" v-model="selectedMonth" @change="fetchStatistics" class="form-control w-auto"/>
           </div>
           <h3>Статистика по учителям</h3>
-          <div class="table-responsive">
-            <table class="table table-striped">
-              <thead class="table-success">
-                <tr>
-                  <th>Учитель</th>
-                  <th>Предмет</th>
-                  <th>Количество занятий</th>
-                  <th>Количество учеников</th>
-                  <th>Общий доход (руб.)</th>
-                  <th>Зарплата учителя (руб.)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="stat in statistics" :key="stat.teacher_name">
-                  <td>{{ stat.teacher_name }}</td>
-                  <td>{{ stat.subject_name || 'Не указан' }}</td>
-                  <td>{{ stat.class_count }}</td>
-                  <td>{{ stat.total_students }}</td>
-                  <td>{{ stat.total_revenue || 0 }}</td>
-                  <td>{{ stat.teacher_salary || 0 }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+          <div class="table-responsive statistics-table">
+            <table class="table table-striped table-hover">
+  <thead class="table-success">
+    <tr>
+      <th>Учитель</th>
+      <th>Предмет</th>
+      <th>Количество занятий</th>
+      <th>Количество учеников</th>
+      <th>Доход</th>
+      <th>Зарплата учителя</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr v-for="stat in statistics" :key="stat.teacher_name">
+      <td>{{ stat.teacher_name }}</td>
+      <td>{{ stat.subject_name }}</td>
+      <td>{{ stat.class_count }}</td>
+      <td>{{ stat.total_students }}</td>
+      <td>{{ stat.total_revenue }}</td>
+      <td>{{ stat.teacher_salary }}</td>
+    </tr>
+    <tr v-if="!statistics.length">
+          <td colspan="6" class="text-center">Нет данных за выбранный период.</td>
+        </tr>
+  </tbody>
+</table>
+</div>
+</div>
+</div>
+      
 
       <!-- Modal for Adding Teacher -->
       <div class="modal fade" id="addTeacherModal" tabindex="-1" aria-labelledby="addTeacherModalLabel" aria-hidden="true">
@@ -997,26 +1001,30 @@
       });
 
       // Methods
-      const handleError = (err: unknown, defaultMessage: string) => {
-        let message = defaultMessage;
-        if (err instanceof AxiosError) {
-          if (err.response) {
-            message = err.response.data?.error || defaultMessage;
-          } else if (err.request) {
-            message = 'Нет ответа от сервера. Проверьте ваше интернет-соединение.';
-          } else {
-            message = err.message || defaultMessage;
-          }
-        } else if (err instanceof Error) {
-          message = err.message || defaultMessage;
-        }
-        toast.error(message);
-        if (message.includes('токен') || message.includes('доступ')) {
-          hasError.value = true;
-          errorMessage.value = message;
-          isLoading.value = false;
-        }
-      };
+      // Обновим handleError для обработки конфликтов
+const handleError = (err, defaultMessage) => {
+  let message = defaultMessage;
+  if (err instanceof AxiosError) {
+    if (err.response) {
+      message = err.response.data?.error || defaultMessage;
+      if (err.response.status === 409) {
+        message = 'Конфликт расписания: учитель или кабинет заняты в это время';
+      }
+    } else if (err.request) {
+      message = 'Нет ответа от сервера. Проверьте ваше интернет-соединение.';
+    } else {
+      message = err.message || defaultMessage;
+    }
+  } else if (err instanceof Error) {
+    message = err.message || defaultMessage;
+  }
+  toast.error(message);
+  if (message.includes('токен') || message.includes('доступ')) {
+    hasError.value = true;
+    errorMessage.value = message;
+    isLoading.value = false;
+  }
+};
 
       const validateToken = async () => {
         try {
@@ -1138,32 +1146,32 @@
       };
 
       const createClass = async () => {
-        try {
-          const token = localStorage.getItem('token');
-          if (!token) {
-            toast.error('Токен отсутствует. Пожалуйста, войдите снова.');
-            logout();
-            return;
-          }
-          await axios.post('http://localhost:3000/api/classes', newClass.value, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          toast.success('Занятие успешно добавлено');
-          newClass.value = {
-            subject_id: '',
-            teacher_id: '',
-            schedule: '',
-            room_id: '',
-            price: 0,
-            class_type: 'group',
-            min_age: 3,
-            max_age: 16,
-          };
-          await fetchData();
-        } catch (err) {
-          handleError(err, 'Ошибка при добавлении занятия');
-        }
-      };
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Токен отсутствует. Пожалуйста, войдите снова.');
+      logout();
+      return;
+    }
+    await axios.post('http://localhost:3000/api/classes', newClass.value, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    toast.success('Занятие успешно добавлено');
+    newClass.value = {
+      subject_id: '',
+      teacher_id: '',
+      schedule: '',
+      room_id: '',
+      price: 0,
+      class_type: 'group',
+      min_age: 3,
+      max_age: 16,
+    };
+    await fetchData();
+  } catch (err) {
+    handleError(err, 'Ошибка при добавлении занятия');
+  }
+};
 
       const openEditClassModal = (classItem: ClassItem) => {
         editClass.value = {
@@ -1186,22 +1194,22 @@
       };
 
       const updateClass = async () => {
-        try {
-          const token = localStorage.getItem('token');
-          if (!token) {
-            toast.error('Токен отсутствует. Пожалуйста, войдите снова.');
-            logout();
-            return;
-          }
-          await axios.put(`http://localhost:3000/api/classes/${editClass.value.id}`, editClass.value, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          toast.success('Занятие успешно обновлено');
-          await fetchData();
-        } catch (err) {
-          handleError(err, 'Ошибка при обновлении занятия');
-        }
-      };
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Токен отсутствует. Пожалуйста, войдите снова.');
+      logout();
+      return;
+    }
+    await axios.put(`http://localhost:3000/api/classes/${editClass.value.id}`, editClass.value, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    toast.success('Занятие успешно обновлено');
+    await fetchData();
+  } catch (err) {
+    handleError(err, 'Ошибка при обновлении занятия');
+  }
+};
 
       const deleteClass = async (classId: string) => {
         if (!confirm('Вы уверены, что хотите удалить это занятие?')) return;
@@ -1242,23 +1250,25 @@
       };
 
       const fetchStatistics = async () => {
-        try {
-          const token = localStorage.getItem('token');
-          if (!token) {
-            toast.error('Токен отсутствует. Пожалуйста, войдите снова.');
-            logout();
-            return;
-          }
-          const response = await axios.get<Statistic[]>('http://localhost:3000/api/statistics/teachers', {
-            params: { month: selectedMonth.value },
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          statistics.value = response.data;
-        } catch (err) {
-          handleError(err, 'Ошибка загрузки статистики');
-        }
-      };
-
+  try {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Токен отсутствует. Пожалуйста, войдите снова.');
+      logout();
+      return;
+    }
+    const response = await axios.get('http://localhost:3000/api/statistics/teachers', {
+      params: { month: selectedMonth.value || undefined },
+      headers: { Authorization: `Bearer ${token}`, 'Cache-Control': 'no-cache' },
+    });
+    statistics.value = response.data || [];
+    if (!response.data.length) {
+      toast.info('Нет данных за выбранный период.');
+    }
+  } catch (err) {
+    handleError(err, 'Ошибка загрузки статистики');
+  }
+};
       const filterClasses = () => {
         const selected = new Date(selectedDate.value);
         let filteredClasses = subjectFilter.value

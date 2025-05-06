@@ -83,7 +83,7 @@ export default {
   },
   methods: {
     validatePhone() {
-      console.log('Валидация телефона:', this.phone); // Отладка
+      console.log('Валидация телефона:', this.phone);
       const phonePattern = /^\+\d{10,15}$/;
       if (!this.phone) {
         this.phoneError = 'Поле "Телефон" обязательно';
@@ -92,7 +92,7 @@ export default {
       } else {
         this.phoneError = null;
       }
-      console.log('phoneError:', this.phoneError); // Отладка
+      console.log('phoneError:', this.phoneError);
     },
     showToast(message, type = 'error') {
       if (this.$toast) {
@@ -117,6 +117,10 @@ export default {
         this.showToast('Введите корректный email');
         return;
       }
+      if (this.password.length < 6) {
+        this.showToast('Пароль должен содержать минимум 6 символов');
+        return;
+      }
       if (this.username.length > 50) {
         this.showToast('Имя пользователя не должно превышать 50 символов');
         return;
@@ -139,11 +143,15 @@ export default {
         const response = await axios.post('http://localhost:3000/api/register', userData);
         console.log('Ответ сервера:', response.data);
         this.showToast('Регистрация прошла успешно! Войдите в систему.', 'success');
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        localStorage.setItem('token', response.data.token);
         this.$router.push('/login');
       } catch (error) {
         console.error('Ошибка при регистрации:', error.response?.data || error.message);
         const errorMessage =
-          error.response?.data?.error || 'Ошибка при регистрации. Попробуйте снова.';
+          error.response?.data?.error === 'Пользователь с таким email или именем уже существует'
+            ? 'Пользователь с таким email или именем уже существует'
+            : error.response?.data?.error || 'Ошибка при регистрации. Попробуйте снова.';
         this.showToast(errorMessage);
       } finally {
         this.isLoading = false;
